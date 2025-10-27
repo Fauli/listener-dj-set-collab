@@ -9,7 +9,7 @@ This file tracks the implementation progress for the Listener MVP.
 ### Project Setup
 - [x] Install npm dependencies (`npm install`)
 - [x] Verify Node.js version (>= 18.0.0) - v23.7.0 ✓
-- [x] Create local database (using SQLite for development)
+- [x] Create local PostgreSQL 17 database
 - [x] Configure `.env` file with database URL
 - [x] Generate Prisma client (`npm run db:generate`)
 - [x] Run database migrations (`npm run db:migrate`)
@@ -19,14 +19,15 @@ This file tracks the implementation progress for the Listener MVP.
 - [x] Start backend server (`npm run dev:server`) - Running on :3000
 - [x] Verify backend health endpoint (http://localhost:3000/health) ✓
 - [x] Start frontend dev server (`npm run dev:client`) - Running on :5173
-- [x] Verify frontend loads (http://localhost:5173) - Ready
-- [ ] Verify React welcome page displays correctly - **TEST IN BROWSER**
+- [x] Verify frontend loads (http://localhost:5173) ✓
+- [x] Verify React welcome page displays correctly ✓
+- [x] Migrated from SQLite to PostgreSQL 17 ✓
 - [ ] Test hot-reload on both frontend and backend
 - [ ] Run initial tests (`npm test`)
 - [ ] Fix any linting issues (`npm run lint`)
 
 **Definition of Done:** Both servers run without errors, welcome page displays, hot-reload works.
-**Status:** ✅ Servers running, database ready. **Next:** Open browser to verify UI.
+**Status:** ✅ COMPLETE - PostgreSQL 17 configured, servers running, welcome page verified.
 
 ---
 
@@ -237,12 +238,12 @@ This file tracks the implementation progress for the Listener MVP.
 
 ## 📊 Progress Tracker
 
-**Current Phase:** Phase 0 - Initial Setup (Nearly Complete)
-**Last Updated:** 2025-10-27 20:42 UTC
-**Completed Milestones:** 0 / 11 (Phase 0 in progress)
+**Current Phase:** Phase 1.1 - Room Creation (Ready to begin)
+**Last Updated:** 2025-10-27 21:01 UTC
+**Completed Milestones:** 1 / 11
 
 ### Phase Checklist
-- [x] Phase 0: Initial Setup & Welcome Page (Servers running, awaiting browser verification)
+- [x] Phase 0: Initial Setup & Welcome Page ✅ COMPLETE
 - [ ] Phase 1.1: Room Creation
 - [ ] Phase 1.2: Join Room Flow
 - [ ] Phase 1.3: Track Management
@@ -258,18 +259,20 @@ This file tracks the implementation progress for the Listener MVP.
 
 ## 🎯 Next Action
 
-**Current Focus:** Phase 0 - Verify welcome page in browser
+**Current Focus:** Phase 1.1 - Room Creation
 
-**Servers Running:**
-- ✅ Backend: http://localhost:3000 (health check: OK)
+**System Status:**
+- ✅ Backend: http://localhost:3000 (PostgreSQL 17)
 - ✅ Frontend: http://localhost:5173
-- ✅ Database: SQLite (seeded with sample data)
+- ✅ Database: PostgreSQL (seeded with 2 DJs, 1 room, 2 tracks)
+- ✅ Phase 0 complete!
 
-**Next Steps:**
-1. Open http://localhost:5173 in your browser
-2. Verify the welcome page displays correctly
-3. Test hot-reload by editing `src/client/App.tsx`
-4. Then move to Phase 1.1: Room Creation
+**Ready to Build:**
+Start implementing Phase 1.1: Room Creation
+1. Create Room model service (`src/server/models/Room.ts`)
+2. Implement REST endpoints (`src/server/routes/rooms.ts`)
+3. Write tests for room creation
+4. Build frontend RoomCreate component
 
 ---
 
