@@ -12,10 +12,10 @@ let testUser: { id: string; name: string };
 let createdRoomId: string;
 
 beforeAll(async () => {
-  // Create a test user for room ownership
+  // Create a test user for room ownership with unique name
   testUser = await prisma.user.create({
     data: {
-      name: 'Test DJ',
+      name: `API Test DJ ${Date.now()}`,
       role: 'dj1',
     },
   });
@@ -27,13 +27,13 @@ afterAll(async () => {
     where: {
       ownerId: testUser.id,
     },
-  });
+  }).catch(() => {});
 
   await prisma.user.delete({
     where: {
       id: testUser.id,
     },
-  });
+  }).catch(() => {});
 
   await prisma.$disconnect();
 });
@@ -58,7 +58,7 @@ describe('Room API Endpoints', () => {
       expect(data.room).toBeDefined();
       expect(data.room.name).toBe('Friday Night Mix');
       expect(data.room.ownerId).toBe(testUser.id);
-      expect(data.room.owner.name).toBe('Test DJ');
+      expect(data.room.owner.name).toBe(testUser.name);
       expect(data.joinLink).toContain(`/rooms/${data.room.id}`);
 
       // Save room ID for later tests
