@@ -69,7 +69,6 @@ Focus for MVP:
 - Basic user roles (DJ 1 / DJ 2)
 - Track metadata (title, artist, BPM, key)
 - Simple notes & cue points per transition
-- No audio playback or waveform view (planning only)
 
 ---
 
