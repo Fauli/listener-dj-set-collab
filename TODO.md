@@ -7,6 +7,7 @@ This file tracks the implementation progress for the Listener MVP.
 ## 🚀 Phase 0: Initial Setup & Welcome Page ✅ COMPLETE
 
 ### Project Setup
+
 - [x] Install npm dependencies (`npm install`)
 - [x] Verify Node.js version (>= 18.0.0) - v23.7.0 ✓
 - [x] Create local PostgreSQL 17 database
@@ -16,6 +17,7 @@ This file tracks the implementation progress for the Listener MVP.
 - [x] Seed database with sample data (`npm run db:seed`)
 
 ### Get Welcome Page Running
+
 - [x] Start backend server (`npm run dev:server`) - Running on :3000
 - [x] Verify backend health endpoint (http://localhost:3000/health) ✓
 - [x] Start frontend dev server (`npm run dev:client`) - Running on :5173
@@ -34,6 +36,7 @@ This file tracks the implementation progress for the Listener MVP.
 ## 📋 Phase 1: Core Room & Playlist Management
 
 ### Milestone 1.1: Room Creation ✅ COMPLETE
+
 - [x] Create Room model service (`src/server/models/Room.ts`)
   - [x] `createRoom(name, ownerId)`
   - [x] `getRoomById(id)`
@@ -59,6 +62,7 @@ This file tracks the implementation progress for the Listener MVP.
 ---
 
 ### Milestone 1.2: Join Room Flow ✅ COMPLETE
+
 - [x] Implement WebSocket room join handler (`src/server/sockets/roomHandlers.ts`)
   - [x] Handle `room:join` event
   - [x] Add user to Socket.io room
@@ -83,6 +87,7 @@ This file tracks the implementation progress for the Listener MVP.
 ---
 
 ### Milestone 1.3: Track Management (CRUD) ✅ COMPLETE
+
 - [x] Create Track model service (`src/server/models/Track.ts`)
   - [x] `createTrack(data)`
   - [x] `getTrackById(id)`
@@ -112,6 +117,7 @@ This file tracks the implementation progress for the Listener MVP.
 ---
 
 ### Milestone 1.4: Real-Time Playlist Sync
+
 - [ ] Implement WebSocket playlist handlers (`src/server/sockets/playlistHandlers.ts`)
   - [ ] Handle `playlist:add-track` event
   - [ ] Handle `playlist:remove-track` event
@@ -139,7 +145,21 @@ This file tracks the implementation progress for the Listener MVP.
 
 ---
 
-### Milestone 1.5: Drag & Drop Reordering
+### Milestone 1.5 UI/UX for set management
+
+This milestones tasks need some rework before actually starting!
+
+- [ ] Add two players (deks) to the site to allow playing two tracks
+- [ ] Allow adding of tracks by clicking add or dragging them
+  - [ ] Read ID3 tag for details, fallback to filename if not present
+- [ ] Store the tracks on the backend when added
+- [ ] Show a good looking waveform for the tracks
+- [ ] 
+
+---
+
+### Milestone 1.6: Drag & Drop Reordering
+
 - [ ] Implement reorder logic in SetEntry service
   - [ ] `reorderTracks(roomId, fromPosition, toPosition)`
   - [ ] Handle position updates for affected tracks
@@ -162,6 +182,7 @@ This file tracks the implementation progress for the Listener MVP.
 ## 📤 Phase 2: Export & Polish
 
 ### Milestone 2.1: CSV Export
+
 - [ ] Implement export service (`src/server/services/exportService.ts`)
   - [ ] Generate CSV from playlist
   - [ ] Include all metadata (title, artist, BPM, key, notes)
@@ -181,6 +202,7 @@ This file tracks the implementation progress for the Listener MVP.
 ---
 
 ### Milestone 2.2: UI/UX Polish
+
 - [ ] Add loading states for all async operations
 - [ ] Add error handling and user-friendly error messages
 - [ ] Implement toast notifications for actions
@@ -196,6 +218,7 @@ This file tracks the implementation progress for the Listener MVP.
 ---
 
 ### Milestone 2.3: Simple Authentication
+
 - [ ] Implement JWT token generation
 - [ ] Create basic user registration (name only, no password for MVP)
 - [ ] Add auth middleware for protected routes
@@ -211,6 +234,7 @@ This file tracks the implementation progress for the Listener MVP.
 ## 🧪 Phase 3: Testing & Documentation
 
 ### Testing
+
 - [ ] Achieve 70%+ unit test coverage
 - [ ] Write integration tests for all API endpoints
 - [ ] Write WebSocket event tests (2 client simulation)
@@ -222,6 +246,7 @@ This file tracks the implementation progress for the Listener MVP.
   - [ ] Check build passes
 
 ### Documentation
+
 - [ ] Add JSDoc comments to all public functions
 - [ ] Create API documentation (endpoints, payloads)
 - [ ] Add WebSocket event documentation
@@ -256,6 +281,7 @@ This file tracks the implementation progress for the Listener MVP.
 **Test Status:** 40/47 tests passing (85% pass rate) | Linting: ✅ Clean | TypeScript: ✅ No errors
 
 ### Phase Checklist
+
 - [x] Phase 0: Initial Setup & Welcome Page ✅ COMPLETE
 - [x] Phase 1.1: Room Creation ✅ COMPLETE
 - [x] Phase 1.2: Join Room Flow ✅ COMPLETE
@@ -275,6 +301,7 @@ This file tracks the implementation progress for the Listener MVP.
 **Current Focus:** Phase 1.3 - Track Management (CRUD)
 
 **System Status:**
+
 - ✅ Backend: http://localhost:3000 (PostgreSQL 17)
 - ✅ Frontend: http://localhost:5173
 - ✅ Database: PostgreSQL (seeded with 2 DJs, rooms, 2 tracks)
@@ -283,6 +310,7 @@ This file tracks the implementation progress for the Listener MVP.
 - ✅ Phase 1.2 complete - WebSocket room joining!
 
 **What Was Built (Phase 1.2):**
+
 - ✅ Session model service for tracking active users
 - ✅ WebSocket room handlers (join, disconnect)
 - ✅ Socket.io event handlers on server
@@ -292,6 +320,7 @@ This file tracks the implementation progress for the Listener MVP.
 - ✅ User presence indicators (green pulse animation)
 
 **How to Test Multi-Client Join:**
+
 1. Open http://localhost:5173 in your browser
 2. Enter a room name and click "Create Room"
 3. Click "Join Room" to enter the room
@@ -300,6 +329,7 @@ This file tracks the implementation progress for the Listener MVP.
 6. Close one tab - the user should disappear from the list
 
 **Files Created/Modified (Phase 1.2):**
+
 - Backend: `models/Session.ts`, `sockets/roomHandlers.ts`, `index.ts`
 - Frontend: `services/socket.ts`, `components/RoomPage.tsx`, `App.tsx`, `vite-env.d.ts`
 - Tests: Still 15/15 passing
