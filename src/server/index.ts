@@ -7,6 +7,8 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import roomRoutes from './routes/rooms.js';
+import { registerRoomHandlers } from './sockets/roomHandlers.js';
 
 // Load environment variables
 dotenv.config();
@@ -31,20 +33,16 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API routes will be added here
-// app.use('/api/rooms', roomRoutes);
+// API routes
+app.use('/api/rooms', roomRoutes);
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
   // eslint-disable-next-line no-console
   console.log(`Client connected: ${socket.id}`);
 
-  socket.on('disconnect', () => {
-    // eslint-disable-next-line no-console
-    console.log(`Client disconnected: ${socket.id}`);
-  });
-
-  // Socket event handlers will be added here
+  // Register room-related event handlers
+  registerRoomHandlers(io, socket);
 });
 
 // Start server

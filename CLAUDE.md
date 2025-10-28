@@ -1,6 +1,7 @@
 ## Project: Listener — Collaborative Real-Time DJ Playlist Tool
 
 ### 🎧 Vision
+
 Listener is a **real-time collaborative DJ set planner**.  
 Two (or more) DJs can remotely curate, reorder, and annotate tracks together before a live performance.  
 The app should feel like **“Google Docs for DJ sets”** — with version history, cue points, and transition notes.
@@ -8,7 +9,9 @@ The app should feel like **“Google Docs for DJ sets”** — with version hist
 ---
 
 ## 🧠 Role of Claude Code
+
 Claude Code acts as:
+
 - **Pair programmer** for Node.js + Express + Socket.io backend
 - **Frontend assistant** for React or Vue (to be decided)
 - **Architect** suggesting scalable structure
@@ -24,16 +27,17 @@ Claude can assume different roles depending on the task at hand. Each role has s
 
 ### Available Roles
 
-| Role | Purpose | When to Use |
-|------|---------|-------------|
-| **[Implementer](.vibe/roles/implementer.md)** | Write clean, tested production code | Feature development, bug fixes |
-| **[Reviewer](.vibe/roles/reviewer.md)** | Review code for quality, security, bugs | Code review, quality assurance |
-| **[UX Designer](.vibe/roles/ux-designer.md)** | Design intuitive, user-centered interfaces | UI/UX decisions, component design |
-| **[Product DJ](.vibe/roles/product-dj.md)** | Align features with DJ workflow & product vision | Feature prioritization, scope decisions |
+| Role                                          | Purpose                                          | When to Use                             |
+| --------------------------------------------- | ------------------------------------------------ | --------------------------------------- |
+| **[Implementer](.vibe/roles/implementer.md)** | Write clean, tested production code              | Feature development, bug fixes          |
+| **[Reviewer](.vibe/roles/reviewer.md)**       | Review code for quality, security, bugs          | Code review, quality assurance          |
+| **[UX Designer](.vibe/roles/ux-designer.md)** | Design intuitive, user-centered interfaces       | UI/UX decisions, component design       |
+| **[Product DJ](.vibe/roles/product-dj.md)**   | Align features with DJ workflow & product vision | Feature prioritization, scope decisions |
 
 ### How to Use Roles
 
 **Invoke a role explicitly:**
+
 ```
 "As Product DJ, should we prioritize BPM auto-detection or manual entry for MVP?"
 "Review this code as the Reviewer role"
@@ -42,6 +46,7 @@ Claude can assume different roles depending on the task at hand. Each role has s
 ```
 
 **Multiple roles in sequence:**
+
 ```
 1. Product DJ: "Should we add this feature?"
 2. UX Designer: "How should it look?"
@@ -55,26 +60,29 @@ If no role is specified, Claude acts as a **generalist pair programmer** balanci
 ---
 
 ## 💡 MVP Scope (Reminder)
+
 > See `PLAN.md` for feature details.
 
 Focus for MVP:
-- Real-time playlist collaboration between DJs  
-- Basic user roles (DJ 1 / DJ 2)  
-- Track metadata (title, artist, BPM, key)  
-- Simple notes & cue points per transition  
+
+- Real-time playlist collaboration between DJs
+- Basic user roles (DJ 1 / DJ 2)
+- Track metadata (title, artist, BPM, key)
+- Simple notes & cue points per transition
 - No audio playback or waveform view (planning only)
 
 ---
 
 ## 🧩 Architectural Overview
-| Layer | Tech | Notes |
-|-------|------|-------|
-| **Backend** | Node.js + Express | REST + WebSocket endpoints |
-| **Realtime** | Socket.io | For live playlist sync |
-| **Frontend** | React (Vite or Next.js) | Realtime UI + drag & drop |
+
+| Layer        | Tech                              | Notes                      |
+| ------------ | --------------------------------- | -------------------------- |
+| **Backend**  | Node.js + Express                 | REST + WebSocket endpoints |
+| **Realtime** | Socket.io                         | For live playlist sync     |
+| **Frontend** | React (Vite or Next.js)           | Realtime UI + drag & drop  |
 | **Database** | PostgreSQL (preferred) or MongoDB | Tracks / Playlists / Users |
-| **Auth** | JWT (basic) | Upgrade later |
-| **Testing** | Jest or Vitest | Unit + integration |
+| **Auth**     | JWT (basic)                       | Upgrade later              |
+| **Testing**  | Jest or Vitest                    | Unit + integration         |
 
 Claude must not introduce large framework shifts without explicit confirmation.
 
@@ -83,16 +91,18 @@ Claude must not introduce large framework shifts without explicit confirmation.
 ## 🪄 Development Principles
 
 ### 1. Small, Atomic Changes
-- Always provide **diff-style** patches.  
-- Limit edits to the files explicitly mentioned.  
+
+- Always provide **diff-style** patches.
+- Limit edits to the files explicitly mentioned.
 - Explain briefly what & why before showing code.
 
 ### 2. Consistent Conventions
-- Use **ES Modules** with async/await.  
-- Prefer **TypeScript** (`.ts`) where possible.  
-- Shared constants + types go in `/src/shared/`.  
-- Socket event naming pattern:  
-  - `playlist:*` → track operations  
+
+- Use **ES Modules** with async/await.
+- Prefer **TypeScript** (`.ts`) where possible.
+- Shared constants + types go in `/src/shared/`.
+- Socket event naming pattern:
+  - `playlist:*` → track operations
   - `room:*` → user/session operations
 
 ### 3. Collaboration Patterns
@@ -111,17 +121,19 @@ socket.on('playlist:track-added', (track) => updateLocalPlaylist(track));
 ---
 
 ## ⚙️ Claude Collaboration Rules
-1. Summarize understanding before major edits.  
-2. Include minimal docstrings + type hints in new files.  
+
+1. Summarize understanding before major edits.
+2. Include minimal docstrings + type hints in new files.
 3. After implementation, always propose:
-   - One quick manual or test-run command.  
-   - One optional improvement idea.  
-4. Ask before assuming new features or stack changes.  
+   - One quick manual or test-run command.
+   - One optional improvement idea.
+4. Ask before assuming new features or stack changes.
 5. Stay within MVP scope — advanced ideas go in `BACKLOG.md`.
 
 ---
 
 ## 🧱 Folder Structure
+
 ```
 listener/
 ├── src/
@@ -144,26 +156,29 @@ listener/
 ---
 
 ## 🔐 Security & Stability Expectations
-- Validate all input (Zod or manual).  
-- Never trust client-provided room / user data.  
-- JWT or session cookies for auth (simple).  
-- Handle reconnection via Socket.io built-ins.  
+
+- Validate all input (Zod or manual).
+- Never trust client-provided room / user data.
+- JWT or session cookies for auth (simple).
+- Handle reconnection via Socket.io built-ins.
 - Use optimistic UI updates when reasonable.
 
 ---
 
 ## 🧪 Testing Guidance for Claude
-- Add Jest / Vitest tests alongside new logic.  
-- Include at least one realistic case.  
-- Mock external APIs / DB calls.  
+
+- Add Jest / Vitest tests alongside new logic.
+- Include at least one realistic case.
+- Mock external APIs / DB calls.
 - For Socket.io: simulate 2 clients and verify broadcast.
 
 ---
 
 ## 🛠️ Performance & Scaling Notes
-- Use namespaces for Socket.io rooms.  
-- Avoid global broadcasts.  
-- Redis adapter / queueing only after MVP.  
+
+- Use namespaces for Socket.io rooms.
+- Avoid global broadcasts.
+- Redis adapter / queueing only after MVP.
 - Index DB queries when adding persistence.
 
 ---
@@ -185,23 +200,27 @@ listener/
 ---
 
 ## ✅ Claude Checklist
+
 Before submitting a change:
-- [ ] Confirm goal & affected files  
-- [ ] Provide concise diff  
-- [ ] Add or update tests  
-- [ ] Suggest validation step (`npm run dev` etc.)  
-- [ ] Avoid unrelated refactors  
+
+- [ ] Confirm goal & affected files
+- [ ] Provide concise diff
+- [ ] Add or update tests
+- [ ] Suggest validation step (`npm run dev` etc.)
+- [ ] Avoid unrelated refactors
 
 ---
 
 ## 🧭 Post-MVP Ideas (Reference Only)
-- BPM/key auto-analysis  
-- AI “next track” suggestions  
-- Role-based permissions and history merge  
+
+- BPM/key auto-analysis
+- AI “next track” suggestions
+- Role-based permissions and history merge
 
 ---
 
 ## 🧰 Environment Variables (for Claude context)
+
 Use placeholders — never real secrets.
 
 ```bash
@@ -210,4 +229,3 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/listener
 JWT_SECRET=changeme
 ALLOWED_ORIGINS=http://localhost:5173
 ```
-

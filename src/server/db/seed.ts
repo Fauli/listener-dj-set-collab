@@ -3,9 +3,7 @@
  * Run with: npm run db:seed
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from './client.js';
 
 async function main() {
   // eslint-disable-next-line no-console
