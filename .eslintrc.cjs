@@ -39,8 +39,15 @@ module.exports = {
   overrides: [
     {
       files: ['*.test.ts', '*.test.tsx', '*.spec.ts', '*.spec.tsx'],
-      env: {
-        vitest: true,
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        vi: 'readonly',
       },
     },
   ],

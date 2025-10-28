@@ -8,6 +8,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  // eslint-disable-next-line no-console
   console.log('Seeding database...');
 
   // Create sample users
@@ -18,7 +19,7 @@ async function main() {
     },
   });
 
-  const dj2 = await prisma.user.create({
+  await prisma.user.create({
     data: {
       name: 'DJ Beta',
       role: 'dj2',
@@ -72,9 +73,13 @@ async function main() {
     ],
   });
 
+  // eslint-disable-next-line no-console
   console.log('✓ Database seeded successfully');
+  // eslint-disable-next-line no-console
   console.log(`  - Created room: ${room.name} (ID: ${room.id})`);
+  // eslint-disable-next-line no-console
   console.log(`  - Created ${2} DJs`);
+  // eslint-disable-next-line no-console
   console.log(`  - Created ${2} tracks`);
 }
 

@@ -36,9 +36,11 @@ app.get('/health', (_req, res) => {
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
+  // eslint-disable-next-line no-console
   console.log(`Client connected: ${socket.id}`);
 
   socket.on('disconnect', () => {
+    // eslint-disable-next-line no-console
     console.log(`Client disconnected: ${socket.id}`);
   });
 
@@ -47,7 +49,9 @@ io.on('connection', (socket) => {
 
 // Start server
 httpServer.listen(PORT, () => {
+  // eslint-disable-next-line no-console
   console.log(`🎧 Listener server running on http://localhost:${PORT}`);
+  // eslint-disable-next-line no-console
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 

@@ -9,12 +9,48 @@ The app should feel like **“Google Docs for DJ sets”** — with version hist
 
 ## 🧠 Role of Claude Code
 Claude Code acts as:
-- **Pair programmer** for Node.js + Express + Socket.io backend  
-- **Frontend assistant** for React or Vue (to be decided)  
-- **Architect** suggesting scalable structure  
-- **Technical writer** for documentation and tests  
+- **Pair programmer** for Node.js + Express + Socket.io backend
+- **Frontend assistant** for React or Vue (to be decided)
+- **Architect** suggesting scalable structure
+- **Technical writer** for documentation and tests
 
-Claude’s goal: produce **small, incremental, tested changes** toward the MVP defined in `PLAN.md`.
+Claude's goal: produce **small, incremental, tested changes** toward the MVP defined in `PLAN.md`.
+
+---
+
+## 🎭 Specialized Roles
+
+Claude can assume different roles depending on the task at hand. Each role has specific responsibilities and perspectives.
+
+### Available Roles
+
+| Role | Purpose | When to Use |
+|------|---------|-------------|
+| **[Implementer](.vibe/roles/implementer.md)** | Write clean, tested production code | Feature development, bug fixes |
+| **[Reviewer](.vibe/roles/reviewer.md)** | Review code for quality, security, bugs | Code review, quality assurance |
+| **[UX Designer](.vibe/roles/ux-designer.md)** | Design intuitive, user-centered interfaces | UI/UX decisions, component design |
+| **[Product DJ](.vibe/roles/product-dj.md)** | Align features with DJ workflow & product vision | Feature prioritization, scope decisions |
+
+### How to Use Roles
+
+**Invoke a role explicitly:**
+```
+"As Product DJ, should we prioritize BPM auto-detection or manual entry for MVP?"
+"Review this code as the Reviewer role"
+"As UX Designer, how should we display track energy levels?"
+"Acting as Implementer, create the room creation endpoint"
+```
+
+**Multiple roles in sequence:**
+```
+1. Product DJ: "Should we add this feature?"
+2. UX Designer: "How should it look?"
+3. Implementer: "I'll build it"
+4. Reviewer: "Here's my feedback"
+```
+
+**Default Mode:**
+If no role is specified, Claude acts as a **generalist pair programmer** balancing all perspectives.
 
 ---
 
