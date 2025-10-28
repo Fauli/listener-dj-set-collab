@@ -9,9 +9,11 @@ async function main() {
   // eslint-disable-next-line no-console
   console.log('Seeding database...');
 
-  // Create sample users
+  // Create sample users with deterministic UUIDs
+  // These UUIDs are hardcoded in the frontend until we implement auth in Phase 2.3
   const dj1 = await prisma.user.create({
     data: {
+      id: 'f1aaa777-5fd9-4eac-88a5-02c46db731fa', // DJ Alpha - used in RoomCreate.tsx
       name: 'DJ Alpha',
       role: 'dj1',
     },
@@ -19,6 +21,7 @@ async function main() {
 
   await prisma.user.create({
     data: {
+      id: 'e2bbb888-6fe0-5fbd-9d96-13d57ec842fb', // DJ Beta
       name: 'DJ Beta',
       role: 'dj2',
     },

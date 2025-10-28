@@ -8,6 +8,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import roomRoutes from './routes/rooms.js';
+import trackRoutes from './routes/tracks.js';
 import { registerRoomHandlers } from './sockets/roomHandlers.js';
 
 // Load environment variables
@@ -35,6 +36,7 @@ app.get('/health', (_req, res) => {
 
 // API routes
 app.use('/api/rooms', roomRoutes);
+app.use('/api/rooms', trackRoutes);
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
