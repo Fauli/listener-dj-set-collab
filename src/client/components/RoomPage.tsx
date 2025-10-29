@@ -1,5 +1,5 @@
 /**
- * RoomPage component - Displays a room with real-time user presence
+ * RoomPage component - Displays a room with real-time user presence and playlist
  */
 
 import { useEffect, useState } from 'react';
@@ -9,11 +9,22 @@ import {
   onRoomState,
   onUserJoined,
   onUserLeft,
+  onTrackAdded,
+  onTrackRemoved,
+  onTrackUpdated,
+  onTrackReordered,
   RoomState,
   UserJoinedData,
   UserLeftData,
+  TrackAddedData,
+  TrackRemovedData,
+  TrackUpdatedData,
+  TrackReorderedData,
   disconnectSocket,
 } from '../services/socket';
+import { usePlaylistStore } from '../stores/playlistStore';
+import TrackList from './TrackList';
+import AddTrackForm from './AddTrackForm';
 
 // Temporary hardcoded user ID (DJ Alpha from seed data)
 // TODO: Replace with actual auth when Phase 2 is implemented
@@ -34,6 +45,14 @@ export default function RoomPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Playlist store
+  const setTracks = usePlaylistStore((state) => state.setTracks);
+  const addTrack = usePlaylistStore((state) => state.addTrack);
+  const removeTrack = usePlaylistStore((state) => state.removeTrack);
+  const updateTrack = usePlaylistStore((state) => state.updateTrack);
+  const reorderTrack = usePlaylistStore((state) => state.reorderTrack);
+  const reset = usePlaylistStore((state) => state.reset);
+
   useEffect(() => {
     if (!roomId) {
       setError('No room ID provided');
@@ -47,6 +66,7 @@ export default function RoomPage() {
     // Listen for initial room state
     const unsubscribeState = onRoomState((data: RoomState) => {
       setRoomState(data);
+      setTracks(data.tracks); // Initialize playlist store
       setLoading(false);
       setError(null);
     });
@@ -81,14 +101,45 @@ export default function RoomPage() {
       });
     });
 
+    // Listen for track added
+    const unsubscribeTrackAdded = onTrackAdded((data: TrackAddedData) => {
+      addTrack(data.setEntry);
+    });
+
+    // Listen for track removed
+    const unsubscribeTrackRemoved = onTrackRemoved((data: TrackRemovedData) => {
+      removeTrack(data.entryId);
+    });
+
+    // Listen for track updated
+    const unsubscribeTrackUpdated = onTrackUpdated((data: TrackUpdatedData) => {
+      updateTrack(data.setEntry.id, data.setEntry);
+    });
+
+    // Listen for track reordered
+    const unsubscribeTrackReordered = onTrackReordered((data: TrackReorderedData) => {
+      // Use the full playlist from server for consistency (avoids client-side position calculation bugs)
+      if (data.playlist) {
+        setTracks(data.playlist);
+      } else {
+        // Fallback: use client-side reorder logic
+        reorderTrack(data.entryId, data.newPosition);
+      }
+    });
+
     // Cleanup on unmount
     return () => {
       unsubscribeState();
       unsubscribeJoined();
       unsubscribeLeft();
+      unsubscribeTrackAdded();
+      unsubscribeTrackRemoved();
+      unsubscribeTrackUpdated();
+      unsubscribeTrackReordered();
       disconnectSocket();
+      reset(); // Clear playlist store
     };
-  }, [roomId]);
+  }, [roomId, setTracks, addTrack, removeTrack, updateTrack, reorderTrack, reset]);
 
   if (loading) {
     return (
@@ -173,52 +224,12 @@ export default function RoomPage() {
 
         {/* Playlist Panel */}
         <div className="lg:col-span-2">
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-bold mb-4 flex items-center">
-              <span className="mr-2">🎵</span>
-              Playlist
-              <span className="ml-auto bg-purple-600 text-xs px-2 py-1 rounded-full">
-                {roomState.tracks.length}
-              </span>
-            </h2>
-            {roomState.tracks.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500 mb-2">No tracks in the set yet</p>
-                <p className="text-sm text-gray-600">
-                  Track management coming in Phase 1.3
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {roomState.tracks.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center p-4 bg-gray-700/50 rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <div className="w-8 h-8 flex items-center justify-center bg-purple-600 rounded mr-4 font-bold">
-                      {entry.position}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{entry.track.title}</p>
-                      <p className="text-sm text-gray-400">{entry.track.artist}</p>
-                      {entry.note && (
-                        <p className="text-xs text-gray-500 mt-1">Note: {entry.note}</p>
-                      )}
-                    </div>
-                    {entry.track.bpm && (
-                      <span className="text-xs bg-gray-600 px-2 py-1 rounded mr-2">
-                        {entry.track.bpm} BPM
-                      </span>
-                    )}
-                    {entry.track.key && (
-                      <span className="text-xs bg-gray-600 px-2 py-1 rounded">
-                        {entry.track.key}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="space-y-6">
+            {/* Add Track Form */}
+            <AddTrackForm roomId={roomId!} />
+
+            {/* Track List */}
+            <TrackList roomId={roomId!} />
           </div>
         </div>
       </div>

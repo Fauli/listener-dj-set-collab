@@ -10,6 +10,7 @@ import dotenv from 'dotenv';
 import roomRoutes from './routes/rooms.js';
 import trackRoutes from './routes/tracks.js';
 import { registerRoomHandlers } from './sockets/roomHandlers.js';
+import { registerPlaylistHandlers } from './sockets/playlistHandlers.js';
 
 // Load environment variables
 dotenv.config();
@@ -43,8 +44,9 @@ io.on('connection', (socket) => {
   // eslint-disable-next-line no-console
   console.log(`Client connected: ${socket.id}`);
 
-  // Register room-related event handlers
+  // Register event handlers
   registerRoomHandlers(io, socket);
+  registerPlaylistHandlers(io, socket);
 });
 
 // Start server

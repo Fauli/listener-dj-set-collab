@@ -3,6 +3,16 @@
  */
 
 import { io, Socket } from 'socket.io-client';
+import type {
+  RoomState,
+  UserJoinedData,
+  UserLeftData,
+  TrackAddedData,
+  TrackRemovedData,
+  TrackUpdatedData,
+  TrackReorderedData,
+  Track,
+} from '../../shared/types/index.js';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 
@@ -82,52 +92,82 @@ export function onUserLeft(callback: (data: UserLeftData) => void) {
   return () => sock.off('user:left', callback);
 }
 
-// Types for socket events
-export interface RoomState {
-  room: {
-    id: string;
-    name: string;
-    owner: {
-      id: string;
-      name: string;
-      role: string;
-    };
-  };
-  users: Array<{
-    id: string;
-    name: string;
-    role: string;
-    joinedAt: string;
-  }>;
-  tracks: Array<{
-    id: string;
-    position: number;
-    note?: string;
-    track: {
-      id: string;
-      title: string;
-      artist: string;
-      bpm?: number;
-      key?: string;
-      energy?: number;
-    };
-  }>;
+/**
+ * Listen for track added events
+ */
+export function onTrackAdded(callback: (data: TrackAddedData) => void) {
+  const sock = getSocket();
+  sock.on('playlist:track-added', callback);
+  return () => sock.off('playlist:track-added', callback);
 }
 
-export interface UserJoinedData {
-  user: {
-    id: string;
-    name: string;
-    role: string;
-  };
-  joinedAt: string;
+/**
+ * Listen for track removed events
+ */
+export function onTrackRemoved(callback: (data: TrackRemovedData) => void) {
+  const sock = getSocket();
+  sock.on('playlist:track-removed', callback);
+  return () => sock.off('playlist:track-removed', callback);
 }
 
-export interface UserLeftData {
-  users: Array<{
-    id: string;
-    name: string;
-    role: string;
-    joinedAt: string;
-  }>;
+/**
+ * Listen for track updated events
+ */
+export function onTrackUpdated(callback: (data: TrackUpdatedData) => void) {
+  const sock = getSocket();
+  sock.on('playlist:track-updated', callback);
+  return () => sock.off('playlist:track-updated', callback);
 }
+
+/**
+ * Listen for track reordered events
+ */
+export function onTrackReordered(callback: (data: TrackReorderedData) => void) {
+  const sock = getSocket();
+  sock.on('playlist:track-reordered', callback);
+  return () => sock.off('playlist:track-reordered', callback);
+}
+
+/**
+ * Emit add track event
+ */
+export function addTrack(roomId: string, track: Omit<Track, 'id' | 'createdAt'>, position: number, note?: string) {
+  const sock = getSocket();
+  sock.emit('playlist:add-track', { roomId, track, position, note });
+}
+
+/**
+ * Emit remove track event
+ */
+export function removeTrack(roomId: string, entryId: string) {
+  const sock = getSocket();
+  sock.emit('playlist:remove-track', { roomId, entryId });
+}
+
+/**
+ * Emit update note event
+ */
+export function updateTrackNote(roomId: string, entryId: string, note: string) {
+  const sock = getSocket();
+  sock.emit('playlist:update-note', { roomId, entryId, note });
+}
+
+/**
+ * Emit reorder track event
+ */
+export function reorderTrack(roomId: string, entryId: string, newPosition: number) {
+  const sock = getSocket();
+  sock.emit('playlist:reorder', { roomId, entryId, newPosition });
+}
+
+// Re-export types for convenience
+export type {
+  RoomState,
+  UserJoinedData,
+  UserLeftData,
+  TrackAddedData,
+  TrackRemovedData,
+  TrackUpdatedData,
+  TrackReorderedData,
+  Track,
+};

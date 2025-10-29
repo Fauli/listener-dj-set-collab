@@ -147,62 +147,69 @@ export async function removeTrackFromPlaylist(entryId: string) {
 /**
  * Update position of a track (reordering)
  * Handles shifting of other tracks automatically
+ * Uses transaction to prevent race conditions during concurrent reorders
  */
 export async function updatePosition(entryId: string, newPosition: number) {
-  const entry = await prisma.setEntry.findUnique({
-    where: { id: entryId },
-    select: { roomId: true, position: true },
-  });
+  // Wrap entire operation in transaction for atomicity
+  return await prisma.$transaction(async (tx) => {
+    const entry = await tx.setEntry.findUnique({
+      where: { id: entryId },
+      select: { roomId: true, position: true },
+    });
 
-  if (!entry) {
-    throw new Error('Set entry not found');
-  }
+    if (!entry) {
+      throw new Error('Set entry not found');
+    }
 
-  const oldPosition = entry.position;
+    const oldPosition = entry.position;
 
-  if (oldPosition === newPosition) {
-    // No change needed
-    return await getSetEntryById(entryId);
-  }
+    if (oldPosition === newPosition) {
+      // No change needed
+      return await tx.setEntry.findUnique({
+        where: { id: entryId },
+        include: { track: true },
+      });
+    }
 
-  // Remove from old position (shift others down)
-  await prisma.setEntry.updateMany({
-    where: {
-      roomId: entry.roomId,
-      position: {
-        gt: oldPosition,
+    // Remove from old position (shift others down)
+    await tx.setEntry.updateMany({
+      where: {
+        roomId: entry.roomId,
+        position: {
+          gt: oldPosition,
+        },
       },
-    },
-    data: {
-      position: {
-        decrement: 1,
+      data: {
+        position: {
+          decrement: 1,
+        },
       },
-    },
-  });
+    });
 
-  // Make room at new position (shift others up)
-  await prisma.setEntry.updateMany({
-    where: {
-      roomId: entry.roomId,
-      position: {
-        gte: newPosition,
+    // Make room at new position (shift others up)
+    await tx.setEntry.updateMany({
+      where: {
+        roomId: entry.roomId,
+        position: {
+          gte: newPosition,
+        },
       },
-    },
-    data: {
-      position: {
-        increment: 1,
+      data: {
+        position: {
+          increment: 1,
+        },
       },
-    },
-  });
+    });
 
-  // Update the entry's position
-  const updatedEntry = await prisma.setEntry.update({
-    where: { id: entryId },
-    data: { position: newPosition },
-    include: { track: true },
-  });
+    // Update the entry's position
+    const updatedEntry = await tx.setEntry.update({
+      where: { id: entryId },
+      data: { position: newPosition },
+      include: { track: true },
+    });
 
-  return updatedEntry;
+    return updatedEntry;
+  });
 }
 
 /**
