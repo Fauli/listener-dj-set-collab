@@ -195,7 +195,6 @@ function SortableTrackItem({
 
 export default function TrackList({ roomId }: TrackListProps) {
   const tracks = usePlaylistStore((state) => state.tracks);
-  const reorderTrackLocal = usePlaylistStore((state) => state.reorderTrack);
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [noteValue, setNoteValue] = useState('');
 
@@ -217,10 +216,8 @@ export default function TrackList({ roomId }: TrackListProps) {
 
     if (oldIndex === -1 || newIndex === -1) return;
 
-    // Optimistic UI update
-    reorderTrackLocal(active.id as string, newIndex);
-
     // Emit WebSocket event for server sync
+    // Server will broadcast the updated playlist to all clients
     reorderTrack(roomId, active.id as string, newIndex);
   };
 

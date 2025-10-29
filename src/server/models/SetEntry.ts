@@ -171,37 +171,48 @@ export async function updatePosition(entryId: string, newPosition: number) {
       });
     }
 
-    // Remove from old position (shift others down)
-    await tx.setEntry.updateMany({
-      where: {
-        roomId: entry.roomId,
-        position: {
-          gt: oldPosition,
-        },
-      },
-      data: {
-        position: {
-          decrement: 1,
-        },
-      },
+    // Step 1: Move the entry to a temporary negative position to avoid conflicts
+    await tx.setEntry.update({
+      where: { id: entryId },
+      data: { position: -1 },
     });
 
-    // Make room at new position (shift others up)
-    await tx.setEntry.updateMany({
-      where: {
-        roomId: entry.roomId,
-        position: {
-          gte: newPosition,
+    // Step 2: Shift other tracks based on direction of movement
+    if (oldPosition < newPosition) {
+      // Moving down: shift tracks between old and new position down
+      await tx.setEntry.updateMany({
+        where: {
+          roomId: entry.roomId,
+          position: {
+            gt: oldPosition,
+            lte: newPosition,
+          },
         },
-      },
-      data: {
-        position: {
-          increment: 1,
+        data: {
+          position: {
+            decrement: 1,
+          },
         },
-      },
-    });
+      });
+    } else {
+      // Moving up: shift tracks between new and old position up
+      await tx.setEntry.updateMany({
+        where: {
+          roomId: entry.roomId,
+          position: {
+            gte: newPosition,
+            lt: oldPosition,
+          },
+        },
+        data: {
+          position: {
+            increment: 1,
+          },
+        },
+      });
+    }
 
-    // Update the entry's position
+    // Step 3: Move the entry to its final position
     const updatedEntry = await tx.setEntry.update({
       where: { id: entryId },
       data: { position: newPosition },

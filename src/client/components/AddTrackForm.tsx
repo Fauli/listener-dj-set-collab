@@ -73,9 +73,10 @@ export default function AddTrackForm({ roomId }: AddTrackFormProps) {
   const handleUploadComplete = (files: UploadedFile[]) => {
     // When file uploads complete, they're already added to the database
     // Now emit socket event to add them to the playlist
-    files.forEach((uploadedFile) => {
+    files.forEach((uploadedFile, index) => {
       if (uploadedFile.trackId && uploadedFile.metadata) {
-        const nextPosition = tracks.length;
+        // Calculate position for each track: start from current playlist length + index
+        const nextPosition = tracks.length + index;
         addTrack(
           roomId,
           {
