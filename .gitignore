@@ -53,4 +53,8 @@ Thumbs.db
 .npm
 
 # TypeScript
-*.tsbuildinfouploads/
+*.tsbuildinfo
+
+# Uploads - Ignore all uploaded files but keep the directory structure
+uploads/*
+!uploads/keep
