@@ -158,8 +158,8 @@ This file tracks the implementation progress for the Listener MVP.
 - [ ] Install and configure file upload library
   - [ ] Add `multer` for handling multipart/form-data
   - [ ] Configure storage destination (local disk for MVP)
-  - [ ] Set file size limits (max 50MB per file)
-  - [ ] Restrict to audio formats (.mp3, .wav, .flac, .m4a)
+  - [ ] Set file size limits (max 100MB per file)
+  - [ ] Restrict to audio formats (.mp3, .wav, .flac, .m4a, .aiff)
 - [ ] Install and configure ID3 tag parser
   - [ ] Add `music-metadata` npm package
   - [ ] Create utility function to extract metadata (title, artist, BPM, key, year)
@@ -259,6 +259,7 @@ This file tracks the implementation progress for the Listener MVP.
 **Estimated Effort:** 2-3 days (file upload infrastructure + metadata extraction + UI components)
 
 **Optional Enhancements (Phase 2+):**
+
 - Audio preview player (play 30-second snippet before adding)
 - Waveform visualization
 - BPM detection via audio analysis (librosa, Essentia.js)

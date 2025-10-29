@@ -9,6 +9,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import roomRoutes from './routes/rooms.js';
 import trackRoutes from './routes/tracks.js';
+import uploadRoutes from './routes/uploads.js';
 import { registerRoomHandlers } from './sockets/roomHandlers.js';
 import { registerPlaylistHandlers } from './sockets/playlistHandlers.js';
 
@@ -38,6 +39,7 @@ app.get('/health', (_req, res) => {
 // API routes
 app.use('/api/rooms', roomRoutes);
 app.use('/api/rooms', trackRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
