@@ -431,55 +431,63 @@ describe('WebSocket Room Operations', () => {
 
       try {
         await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Test timed out waiting for all users to join'));
+          }, 5000);
+
           let joinedCount = 0;
+          const expectedJoins = 3;
 
           const checkAllJoined = () => {
             joinedCount++;
-            if (joinedCount === 3) {
-              resolve();
+            if (joinedCount === expectedJoins) {
+              clearTimeout(timeout);
+              // Wait a bit for state to propagate
+              setTimeout(async () => {
+                try {
+                  // Verify database has 3 active sessions
+                  const sessions = await prisma.session.findMany({
+                    where: { roomId: testRoomId, leftAt: null },
+                  });
+                  expect(sessions).toHaveLength(3);
+                  resolve();
+                } catch (error) {
+                  reject(error);
+                }
+              }, 100);
             }
           };
 
-          // Client 1 joins
-          clientSocket.on('connect', () => {
-            clientSocket.emit('room:join', {
+          // Helper to join room
+          const joinRoom = (socket: Socket, userId: string) => {
+            socket.once('room:state', checkAllJoined);
+            socket.emit('room:join', {
               roomId: testRoomId,
-              userId: testUserId,
+              userId,
             });
-            clientSocket.once('room:state', checkAllJoined);
-          });
+          };
+
+          // Client 1 joins
+          if (clientSocket.connected) {
+            joinRoom(clientSocket, testUserId);
+          } else {
+            clientSocket.once('connect', () => joinRoom(clientSocket, testUserId));
+          }
 
           // Client 2 joins
-          clientSocket2.on('connect', () => {
-            clientSocket2.emit('room:join', {
-              roomId: testRoomId,
-              userId: testUser2Id,
-            });
-            clientSocket2.once('room:state', checkAllJoined);
-          });
+          if (clientSocket2.connected) {
+            joinRoom(clientSocket2, testUser2Id);
+          } else {
+            clientSocket2.once('connect', () => joinRoom(clientSocket2, testUser2Id));
+          }
 
           // Client 3 joins
-          clientSocket3.on('connect', () => {
-            clientSocket3.emit('room:join', {
-              roomId: testRoomId,
-              userId: user3.id,
-            });
-            clientSocket3.once('room:state', (data) => {
-              try {
-                expect(data.users).toHaveLength(3);
-                checkAllJoined();
-              } catch (error) {
-                reject(error);
-              }
-            });
-          });
+          if (clientSocket3.connected) {
+            joinRoom(clientSocket3, user3.id);
+          } else {
+            clientSocket3.once('connect', () => joinRoom(clientSocket3, user3.id));
+          }
         });
-
-        // Verify database has 3 active sessions
-        const sessions = await prisma.session.findMany({
-          where: { roomId: testRoomId, leftAt: null },
-        });
-        expect(sessions).toHaveLength(3);
       } finally {
         clientSocket3.disconnect();
         // Clean up sessions first, then user

@@ -38,21 +38,29 @@ router.post('/:roomId/tracks', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Room not found' });
     }
 
-    // Validate request body
+    // Validate track data
     const trackData = createTrackSchema.parse(req.body.track);
-    const playlistData = addToPlaylistSchema.parse({
-      trackId: '', // Will be set after track creation
-      position: req.body.position,
-      note: req.body.note,
-    });
+
+    // Validate playlist data (position and note only, trackId will be set after track creation)
+    const position = typeof req.body.position === 'number'
+      ? req.body.position
+      : 0;
+    const note = req.body.note;
 
     // Create the track first
     const track = await createTrack(trackData);
 
+    // Now validate the complete playlist data including trackId
+    const playlistData = addToPlaylistSchema.parse({
+      trackId: track.id,
+      position,
+      note,
+    });
+
     // Add to playlist
     const setEntry = await addTrackToPlaylist({
       roomId,
-      trackId: track.id,
+      trackId: playlistData.trackId,
       position: playlistData.position,
       note: playlistData.note,
     });

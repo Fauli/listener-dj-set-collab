@@ -3,7 +3,7 @@
  * NOTE: Requires server to be running (npm run dev:server)
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '../../src/server/db/client.js';
 
 const API_BASE = 'http://localhost:3000/api';
@@ -11,7 +11,6 @@ const API_BASE = 'http://localhost:3000/api';
 // Test data
 let testUser: { id: string; name: string };
 let testRoom: { id: string; name: string };
-let createdEntryId: string;
 
 beforeAll(async () => {
   // Create test user
@@ -31,18 +30,34 @@ beforeAll(async () => {
   });
 });
 
+// Clean up after each test to ensure isolation
+beforeEach(async () => {
+  // Delete setEntries FIRST (they reference tracks)
+  await prisma.setEntry.deleteMany({
+    where: { roomId: testRoom.id },
+  });
+  // Then delete orphaned tracks
+  await prisma.track.deleteMany({
+    where: {
+      setEntries: { none: {} },
+    },
+  });
+});
+
 afterAll(async () => {
-  // Clean up
+  // Clean up in correct order: setEntries -> room -> user
   await prisma.setEntry.deleteMany({
     where: { roomId: testRoom.id },
   }).catch(() => {});
-  await prisma.track.deleteMany().catch(() => {}); // Clean up tracks created during tests
+
   await prisma.room.delete({
     where: { id: testRoom.id },
   }).catch(() => {});
+
   await prisma.user.delete({
     where: { id: testUser.id },
   }).catch(() => {});
+
   await prisma.$disconnect();
 });
 
@@ -73,9 +88,6 @@ describe('Track/Playlist API Endpoints', () => {
       expect(data.setEntry.track.artist).toBe('Test Artist');
       expect(data.setEntry.position).toBe(0);
       expect(data.setEntry.note).toBe('Opening track');
-
-      // Save for later tests
-      createdEntryId = data.setEntry.id;
     });
 
     it('should return 404 for non-existent room', async () => {
@@ -112,6 +124,19 @@ describe('Track/Playlist API Endpoints', () => {
 
   describe('GET /api/rooms/:roomId/tracks', () => {
     it('should get playlist for room', async () => {
+      // First add a track to ensure we have something to retrieve
+      await fetch(`${API_BASE}/rooms/${testRoom.id}/tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          track: {
+            title: 'Playlist Track',
+            artist: 'Playlist Artist',
+          },
+          position: 0,
+        }),
+      });
+
       const response = await fetch(`${API_BASE}/rooms/${testRoom.id}/tracks`);
       const data = await response.json();
 
@@ -148,8 +173,26 @@ describe('Track/Playlist API Endpoints', () => {
 
   describe('PUT /api/rooms/:roomId/tracks/:entryId', () => {
     it('should update track note', async () => {
+      // Create a track first
+      const createResponse = await fetch(`${API_BASE}/rooms/${testRoom.id}/tracks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          track: {
+            title: 'Track to Update',
+            artist: 'Update Artist',
+          },
+          position: 0,
+          note: 'Original note',
+        }),
+      });
+
+      const createData = await createResponse.json();
+      const entryId = createData.setEntry.id;
+
+      // Update the note
       const response = await fetch(
-        `${API_BASE}/rooms/${testRoom.id}/tracks/${createdEntryId}`,
+        `${API_BASE}/rooms/${testRoom.id}/tracks/${entryId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -168,7 +211,7 @@ describe('Track/Playlist API Endpoints', () => {
 
   describe('DELETE /api/rooms/:roomId/tracks/:entryId', () => {
     it('should remove track from playlist', async () => {
-      // Add another track first
+      // Add a track first
       const addResponse = await fetch(`${API_BASE}/rooms/${testRoom.id}/tracks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -177,7 +220,7 @@ describe('Track/Playlist API Endpoints', () => {
             title: 'Track to Delete',
             artist: 'Delete Artist',
           },
-          position: 1,
+          position: 0,
         }),
       });
 
