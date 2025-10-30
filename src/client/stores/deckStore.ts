@@ -14,6 +14,7 @@ export interface DeckState {
   duration: number;
   volume: number;
   loop: boolean;
+  rate: number; // Playback rate: 0.92 to 1.08 (±8%)
   isLoading: boolean;
   error: string | null;
 }
@@ -21,6 +22,7 @@ export interface DeckState {
 interface DeckStoreState {
   deckA: DeckState;
   deckB: DeckState;
+  crossfaderPosition: number; // -1 (100% A) to 1 (100% B)
 
   // Actions
   loadTrack: (deckId: 'A' | 'B', track: PlaylistTrack) => void;
@@ -31,9 +33,12 @@ interface DeckStoreState {
   setDuration: (deckId: 'A' | 'B', duration: number) => void;
   setVolume: (deckId: 'A' | 'B', volume: number) => void;
   toggleLoop: (deckId: 'A' | 'B') => void;
+  setRate: (deckId: 'A' | 'B', rate: number) => void;
   setLoading: (deckId: 'A' | 'B', loading: boolean) => void;
   setError: (deckId: 'A' | 'B', error: string | null) => void;
   reset: (deckId: 'A' | 'B') => void;
+  setCrossfaderPosition: (position: number) => void;
+  getCrossfaderVolume: (deckId: 'A' | 'B') => number;
 }
 
 const initialDeckState: DeckState = {
@@ -44,13 +49,15 @@ const initialDeckState: DeckState = {
   duration: 0,
   volume: 0.8,
   loop: false,
+  rate: 1.0, // Normal speed
   isLoading: false,
   error: null,
 };
 
-export const useDeckStore = create<DeckStoreState>((set) => ({
+export const useDeckStore = create<DeckStoreState>((set, get) => ({
   deckA: { ...initialDeckState },
   deckB: { ...initialDeckState },
+  crossfaderPosition: 0, // Start at center (50/50 mix)
 
   loadTrack: (deckId, track) =>
     set((state) => ({
@@ -123,6 +130,14 @@ export const useDeckStore = create<DeckStoreState>((set) => ({
       },
     })),
 
+  setRate: (deckId, rate) =>
+    set((state) => ({
+      [deckId === 'A' ? 'deckA' : 'deckB']: {
+        ...state[deckId === 'A' ? 'deckA' : 'deckB'],
+        rate: Math.max(0.92, Math.min(1.08, rate)), // Clamp to ±8%
+      },
+    })),
+
   setLoading: (deckId, loading) =>
     set((state) => ({
       [deckId === 'A' ? 'deckA' : 'deckB']: {
@@ -147,4 +162,26 @@ export const useDeckStore = create<DeckStoreState>((set) => ({
         volume: state[deckId === 'A' ? 'deckA' : 'deckB'].volume,
       },
     })),
+
+  setCrossfaderPosition: (position) =>
+    set({ crossfaderPosition: Math.max(-1, Math.min(1, position)) }),
+
+  /**
+   * Calculate effective volume for a deck based on crossfader position
+   * Uses smooth curve for natural mixing feel
+   */
+  getCrossfaderVolume: (deckId) => {
+    const state = get();
+    const position = state.crossfaderPosition;
+
+    if (deckId === 'A') {
+      // Deck A: Full volume at -1, silent at +1
+      // Use smooth curve: (1 - position) / 2
+      return Math.max(0, Math.min(1, (1 - position) / 2));
+    } else {
+      // Deck B: Silent at -1, full volume at +1
+      // Use smooth curve: (1 + position) / 2
+      return Math.max(0, Math.min(1, (1 + position) / 2));
+    }
+  },
 }));

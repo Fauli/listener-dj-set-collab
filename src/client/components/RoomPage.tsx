@@ -23,9 +23,11 @@ import {
   disconnectSocket,
 } from '../services/socket';
 import { usePlaylistStore, type PlaylistTrack } from '../stores/playlistStore';
+import { useDeckStore } from '../stores/deckStore';
 import TrackList from './TrackList';
 import AddTrackForm from './AddTrackForm';
 import DeckPlayer from './DeckPlayer';
+import Crossfader from './Crossfader';
 
 // Temporary hardcoded user ID (DJ Alpha from seed data)
 // TODO: Replace with actual auth when Phase 2 is implemented
@@ -53,6 +55,10 @@ export default function RoomPage() {
   const updateTrack = usePlaylistStore((state) => state.updateTrack);
   const reorderTrack = usePlaylistStore((state) => state.reorderTrack);
   const reset = usePlaylistStore((state) => state.reset);
+
+  // Deck store for crossfader
+  const crossfaderPosition = useDeckStore((state) => state.crossfaderPosition);
+  const setCrossfaderPosition = useDeckStore((state) => state.setCrossfaderPosition);
 
   // Store load functions from deck components
   const [deckLoadFunctions, setDeckLoadFunctions] = useState<{
@@ -221,6 +227,14 @@ export default function RoomPage() {
           <DeckPlayer
             deckId="B"
             onLoadFunctionReady={onDeckBLoadFunctionReady}
+          />
+        </div>
+
+        {/* Crossfader - positioned below decks */}
+        <div className="mt-6">
+          <Crossfader
+            position={crossfaderPosition}
+            onChange={setCrossfaderPosition}
           />
         </div>
       </div>

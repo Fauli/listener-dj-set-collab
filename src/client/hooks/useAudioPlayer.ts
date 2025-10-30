@@ -14,6 +14,7 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
   const isPlayingRef = useRef<boolean>(false);
 
   const deck = useDeckStore((state) => (deckId === 'A' ? state.deckA : state.deckB));
+  const crossfaderVolume = useDeckStore((state) => state.getCrossfaderVolume(deckId));
   const {
     loadTrack,
     unloadTrack,
@@ -22,6 +23,7 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
     setDuration,
     setVolume,
     toggleLoop,
+    setRate,
     setLoading,
     setError,
     reset,
@@ -176,6 +178,17 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
     }
   }, [deckId, deck.loop, toggleLoop]);
 
+  // Change playback rate
+  const changeRate = useCallback(
+    (rate: number) => {
+      setRate(deckId, rate);
+      if (howlRef.current) {
+        howlRef.current.rate(rate);
+      }
+    },
+    [deckId, setRate]
+  );
+
   // Unload track
   const unload = useCallback(() => {
     if (howlRef.current) {
@@ -200,12 +213,13 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
     };
   }, []);
 
-  // Sync volume changes from store to Howler
+  // Sync volume changes from store to Howler (deck volume * crossfader volume)
   useEffect(() => {
     if (howlRef.current) {
-      howlRef.current.volume(deck.volume);
+      const effectiveVolume = deck.volume * crossfaderVolume;
+      howlRef.current.volume(effectiveVolume);
     }
-  }, [deck.volume]);
+  }, [deck.volume, crossfaderVolume]);
 
   // Sync loop changes from store to Howler
   useEffect(() => {
@@ -213,6 +227,13 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
       howlRef.current.loop(deck.loop);
     }
   }, [deck.loop]);
+
+  // Sync rate changes from store to Howler
+  useEffect(() => {
+    if (howlRef.current) {
+      howlRef.current.rate(deck.rate);
+    }
+  }, [deck.rate]);
 
   return {
     deck,
@@ -223,6 +244,7 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
     seek,
     changeVolume,
     toggleLoop: toggleLoopMode,
+    changeRate,
     unload,
   };
 }
