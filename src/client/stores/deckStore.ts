@@ -15,6 +15,9 @@ export interface DeckState {
   volume: number;
   loop: boolean;
   rate: number; // Playback rate: 0.92 to 1.08 (±8%)
+  eqLow: number; // EQ Low: -12 to +12 dB
+  eqMid: number; // EQ Mid: -12 to +12 dB
+  eqHigh: number; // EQ High: -12 to +12 dB
   isLoading: boolean;
   error: string | null;
 }
@@ -34,6 +37,9 @@ interface DeckStoreState {
   setVolume: (deckId: 'A' | 'B', volume: number) => void;
   toggleLoop: (deckId: 'A' | 'B') => void;
   setRate: (deckId: 'A' | 'B', rate: number) => void;
+  setEQLow: (deckId: 'A' | 'B', value: number) => void;
+  setEQMid: (deckId: 'A' | 'B', value: number) => void;
+  setEQHigh: (deckId: 'A' | 'B', value: number) => void;
   setLoading: (deckId: 'A' | 'B', loading: boolean) => void;
   setError: (deckId: 'A' | 'B', error: string | null) => void;
   reset: (deckId: 'A' | 'B') => void;
@@ -50,6 +56,9 @@ const initialDeckState: DeckState = {
   volume: 0.8,
   loop: false,
   rate: 1.0, // Normal speed
+  eqLow: 0, // Flat EQ
+  eqMid: 0,
+  eqHigh: 0,
   isLoading: false,
   error: null,
 };
@@ -135,6 +144,30 @@ export const useDeckStore = create<DeckStoreState>((set, get) => ({
       [deckId === 'A' ? 'deckA' : 'deckB']: {
         ...state[deckId === 'A' ? 'deckA' : 'deckB'],
         rate: Math.max(0.92, Math.min(1.08, rate)), // Clamp to ±8%
+      },
+    })),
+
+  setEQLow: (deckId, value) =>
+    set((state) => ({
+      [deckId === 'A' ? 'deckA' : 'deckB']: {
+        ...state[deckId === 'A' ? 'deckA' : 'deckB'],
+        eqLow: Math.max(-12, Math.min(12, value)),
+      },
+    })),
+
+  setEQMid: (deckId, value) =>
+    set((state) => ({
+      [deckId === 'A' ? 'deckA' : 'deckB']: {
+        ...state[deckId === 'A' ? 'deckA' : 'deckB'],
+        eqMid: Math.max(-12, Math.min(12, value)),
+      },
+    })),
+
+  setEQHigh: (deckId, value) =>
+    set((state) => ({
+      [deckId === 'A' ? 'deckA' : 'deckB']: {
+        ...state[deckId === 'A' ? 'deckA' : 'deckB'],
+        eqHigh: Math.max(-12, Math.min(12, value)),
       },
     })),
 

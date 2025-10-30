@@ -11,6 +11,7 @@ import SeekBar from './SeekBar';
 import TransportControls from './TransportControls';
 import VolumeControl from './VolumeControl';
 import PitchControl from './PitchControl';
+import EQControl from './EQControl';
 import TrackSelectorModal from './TrackSelectorModal';
 
 interface DeckPlayerProps {
@@ -20,7 +21,7 @@ interface DeckPlayerProps {
 
 export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerProps) {
   const [showTrackSelector, setShowTrackSelector] = useState(false);
-  const { deck, load, play, pause, stop, seek, changeVolume, toggleLoop, changeRate, unload } = useAudioPlayer(deckId);
+  const { deck, load, play, pause, stop, seek, changeVolume, toggleLoop, changeRate, changeEQLow, changeEQMid, changeEQHigh, unload } = useAudioPlayer(deckId);
 
   const accentColor = deckId === 'A' ? 'primary' : 'purple';
   const borderColor = deckId === 'A' ? 'border-primary-600/30' : 'border-purple-600/30';
@@ -177,7 +178,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
               accentColor={accentColor}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <VolumeControl
                 volume={deck.volume}
                 onChange={changeVolume}
@@ -189,6 +190,16 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                 onChange={changeRate}
                 accentColor={accentColor}
                 originalBpm={deck.track?.track.bpm}
+              />
+
+              <EQControl
+                low={deck.eqLow}
+                mid={deck.eqMid}
+                high={deck.eqHigh}
+                onLowChange={changeEQLow}
+                onMidChange={changeEQMid}
+                onHighChange={changeEQHigh}
+                accentColor={accentColor}
               />
             </div>
           </div>

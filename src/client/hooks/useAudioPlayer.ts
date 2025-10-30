@@ -13,6 +13,12 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
   const animationFrameRef = useRef<number>();
   const isPlayingRef = useRef<boolean>(false);
 
+  // Web Audio API for EQ
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const lowFilterRef = useRef<BiquadFilterNode | null>(null);
+  const midFilterRef = useRef<BiquadFilterNode | null>(null);
+  const highFilterRef = useRef<BiquadFilterNode | null>(null);
+
   const deck = useDeckStore((state) => (deckId === 'A' ? state.deckA : state.deckB));
   const crossfaderVolume = useDeckStore((state) => state.getCrossfaderVolume(deckId));
   const {
@@ -24,6 +30,9 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
     setVolume,
     toggleLoop,
     setRate,
+    setEQLow,
+    setEQMid,
+    setEQHigh,
     setLoading,
     setError,
     reset,
@@ -71,11 +80,11 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
         : undefined;
       console.log(`[Deck ${deckId}] Audio format:`, format);
 
-      // Create new Howl instance
+      // Create new Howl instance (EQ will be set up after load)
       const sound = new Howl({
         src: [audioUrl],
         format: format ? [format] : undefined, // Explicitly specify format
-        html5: true, // Use HTML5 Audio for streaming
+        html5: false, // Use Web Audio for EQ support
         volume: deck.volume,
         loop: deck.loop,
         onload: () => {
@@ -83,6 +92,57 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
           loadTrack(deckId, track);
           setDuration(deckId, sound.duration()); // Set duration AFTER loadTrack (which resets it to 0)
           setLoading(deckId, false);
+
+          // Set up EQ chain using Howler's AudioContext
+          try {
+            // Get Howler's internal audio node
+            const howlSound = (sound as any)._sounds?.[0];
+            const howlNode = howlSound?._node;
+
+            if (howlNode && howlNode.context) {
+              console.log(`[Deck ${deckId}] Setting up EQ chain...`);
+
+              // Use Howler's AudioContext (not our own!)
+              const ctx = howlNode.context;
+              audioContextRef.current = ctx;
+
+              // Only create filters once
+              if (!lowFilterRef.current) {
+                // Create 3-band EQ filters on Howler's AudioContext
+                lowFilterRef.current = ctx.createBiquadFilter();
+                lowFilterRef.current.type = 'lowshelf';
+                lowFilterRef.current.frequency.value = 100;
+                lowFilterRef.current.gain.value = deck.eqLow;
+
+                midFilterRef.current = ctx.createBiquadFilter();
+                midFilterRef.current.type = 'peaking';
+                midFilterRef.current.frequency.value = 1000;
+                midFilterRef.current.Q.value = 1;
+                midFilterRef.current.gain.value = deck.eqMid;
+
+                highFilterRef.current = ctx.createBiquadFilter();
+                highFilterRef.current.type = 'highshelf';
+                highFilterRef.current.frequency.value = 10000;
+                highFilterRef.current.gain.value = deck.eqHigh;
+
+                // Chain: low -> mid -> high -> destination
+                lowFilterRef.current.connect(midFilterRef.current);
+                midFilterRef.current.connect(highFilterRef.current);
+                highFilterRef.current.connect(ctx.destination);
+
+                console.log(`[Deck ${deckId}] Created EQ filter chain`);
+              }
+
+              // Connect Howler's audio node to our EQ chain
+              howlNode.disconnect();
+              howlNode.connect(lowFilterRef.current);
+              console.log(`[Deck ${deckId}] ✅ Connected audio to EQ chain`);
+            } else {
+              console.warn(`[Deck ${deckId}] No audio node found, EQ disabled`);
+            }
+          } catch (e) {
+            console.error(`[Deck ${deckId}] ❌ EQ setup failed:`, e);
+          }
         },
         onloaderror: (_id, error) => {
           console.error(`[Deck ${deckId}] Load error:`, error);
@@ -124,12 +184,19 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
 
       howlRef.current = sound;
     },
-    [deckId, deck.volume, deck.loop, setLoading, setError, setDuration, loadTrack, setPlaying, setCurrentTime, updateCurrentTime]
+    [deckId, deck.volume, deck.loop, deck.eqLow, deck.eqMid, deck.eqHigh, setLoading, setError, setDuration, loadTrack, setPlaying, setCurrentTime, updateCurrentTime]
   );
 
   // Play
-  const play = useCallback(() => {
+  const play = useCallback(async () => {
     console.log(`[Deck ${deckId}] Play called. Has howl:`, !!howlRef.current, 'isPlaying:', isPlayingRef.current);
+
+    // Resume AudioContext if suspended (required by browser autoplay policies)
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      console.log(`[Deck ${deckId}] Resuming AudioContext`);
+      await audioContextRef.current.resume();
+    }
+
     if (howlRef.current && !isPlayingRef.current) {
       console.log(`[Deck ${deckId}] Calling howl.play()`);
       howlRef.current.play();
@@ -189,6 +256,37 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
     [deckId, setRate]
   );
 
+  // EQ controls
+  const changeEQLow = useCallback(
+    (value: number) => {
+      setEQLow(deckId, value);
+      if (lowFilterRef.current) {
+        lowFilterRef.current.gain.value = value;
+      }
+    },
+    [deckId, setEQLow]
+  );
+
+  const changeEQMid = useCallback(
+    (value: number) => {
+      setEQMid(deckId, value);
+      if (midFilterRef.current) {
+        midFilterRef.current.gain.value = value;
+      }
+    },
+    [deckId, setEQMid]
+  );
+
+  const changeEQHigh = useCallback(
+    (value: number) => {
+      setEQHigh(deckId, value);
+      if (highFilterRef.current) {
+        highFilterRef.current.gain.value = value;
+      }
+    },
+    [deckId, setEQHigh]
+  );
+
   // Unload track
   const unload = useCallback(() => {
     if (howlRef.current) {
@@ -210,6 +308,11 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      // Don't close AudioContext - Howler manages it
+      audioContextRef.current = null;
+      lowFilterRef.current = null;
+      midFilterRef.current = null;
+      highFilterRef.current = null;
     };
   }, []);
 
@@ -245,6 +348,9 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
     changeVolume,
     toggleLoop: toggleLoopMode,
     changeRate,
+    changeEQLow,
+    changeEQMid,
+    changeEQHigh,
     unload,
   };
 }
