@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
+import { useDeckStore } from '../stores/deckStore';
 import type { PlaylistTrack } from '../stores/playlistStore';
 import TrackInfo from './TrackInfo';
 import Waveform from './Waveform';
@@ -12,6 +13,7 @@ import TransportControls from './TransportControls';
 import VolumeControl from './VolumeControl';
 import PitchControl from './PitchControl';
 import EQControl from './EQControl';
+import BeatGridControl from './BeatGridControl';
 import TrackSelectorModal from './TrackSelectorModal';
 
 interface DeckPlayerProps {
@@ -22,6 +24,7 @@ interface DeckPlayerProps {
 export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerProps) {
   const [showTrackSelector, setShowTrackSelector] = useState(false);
   const { deck, load, play, pause, stop, seek, changeVolume, toggleLoop, changeRate, changeEQLow, changeEQMid, changeEQHigh, unload } = useAudioPlayer(deckId);
+  const setFirstBeatTime = useDeckStore((state) => state.setFirstBeatTime);
 
   const accentColor = deckId === 'A' ? 'primary' : 'purple';
   const borderColor = deckId === 'A' ? 'border-primary-600/30' : 'border-purple-600/30';
@@ -41,6 +44,14 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
   const handleUnload = () => {
     stop();
     unload();
+  };
+
+  const handleSetBeatGrid = (time: number) => {
+    setFirstBeatTime(deckId, time);
+  };
+
+  const handleClearBeatGrid = () => {
+    setFirstBeatTime(deckId, null);
   };
 
   const audioUrl = deck.track ? `http://localhost:3000/api/upload/${deck.track.track.id}/audio` : null;
@@ -132,6 +143,10 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                 isPlaying={deck.isPlaying}
                 onSeek={seek}
                 accentColor={accentColor}
+                firstBeatTime={deck.firstBeatTime}
+                bpm={deck.track?.track.bpm}
+                rate={deck.rate}
+                duration={deck.duration}
               />
             ) : (
               <div className="h-20 bg-gray-900/50 rounded flex items-center justify-center">
@@ -178,7 +193,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
               accentColor={accentColor}
             />
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <VolumeControl
                 volume={deck.volume}
                 onChange={changeVolume}
@@ -199,6 +214,15 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                 onLowChange={changeEQLow}
                 onMidChange={changeEQMid}
                 onHighChange={changeEQHigh}
+                accentColor={accentColor}
+              />
+
+              <BeatGridControl
+                currentTime={deck.currentTime}
+                firstBeatTime={deck.firstBeatTime}
+                audioUrl={audioUrl}
+                onSetBeatGrid={handleSetBeatGrid}
+                onClearBeatGrid={handleClearBeatGrid}
                 accentColor={accentColor}
               />
             </div>

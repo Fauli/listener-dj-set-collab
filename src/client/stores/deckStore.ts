@@ -20,6 +20,7 @@ export interface DeckState {
   eqHigh: number; // EQ High: -12 to +12 dB
   isLoading: boolean;
   error: string | null;
+  firstBeatTime: number | null; // Time in seconds where beat 1 occurs (for beat grid)
 }
 
 interface DeckStoreState {
@@ -42,6 +43,7 @@ interface DeckStoreState {
   setEQHigh: (deckId: 'A' | 'B', value: number) => void;
   setLoading: (deckId: 'A' | 'B', loading: boolean) => void;
   setError: (deckId: 'A' | 'B', error: string | null) => void;
+  setFirstBeatTime: (deckId: 'A' | 'B', time: number | null) => void;
   reset: (deckId: 'A' | 'B') => void;
   setCrossfaderPosition: (position: number) => void;
   getCrossfaderVolume: (deckId: 'A' | 'B') => number;
@@ -61,6 +63,7 @@ const initialDeckState: DeckState = {
   eqHigh: 0,
   isLoading: false,
   error: null,
+  firstBeatTime: null, // No beat grid by default
 };
 
 export const useDeckStore = create<DeckStoreState>((set, get) => ({
@@ -185,6 +188,14 @@ export const useDeckStore = create<DeckStoreState>((set, get) => ({
         ...state[deckId === 'A' ? 'deckA' : 'deckB'],
         error,
         isLoading: false,
+      },
+    })),
+
+  setFirstBeatTime: (deckId, time) =>
+    set((state) => ({
+      [deckId === 'A' ? 'deckA' : 'deckB']: {
+        ...state[deckId === 'A' ? 'deckA' : 'deckB'],
+        firstBeatTime: time,
       },
     })),
 

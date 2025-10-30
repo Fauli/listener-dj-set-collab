@@ -4,6 +4,7 @@
 
 import { useEffect, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
+import { getBeatsInRange } from '../utils/beatGrid';
 
 interface WaveformProps {
   audioUrl: string | null;
@@ -11,6 +12,10 @@ interface WaveformProps {
   isPlaying: boolean;
   onSeek: (time: number) => void;
   accentColor?: string;
+  firstBeatTime?: number | null;
+  bpm?: number | null;
+  rate?: number;
+  duration?: number;
 }
 
 export default function Waveform({
@@ -19,6 +24,10 @@ export default function Waveform({
   isPlaying,
   onSeek,
   accentColor = 'primary',
+  firstBeatTime = null,
+  bpm = null,
+  rate = 1.0,
+  duration = 0,
 }: WaveformProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -108,6 +117,12 @@ export default function Waveform({
     );
   }
 
+  // Calculate beat markers if beat grid is set
+  const beatMarkers =
+    firstBeatTime !== null && bpm !== null && duration > 0
+      ? getBeatsInRange(0, duration, { firstBeatTime, bpm, rate })
+      : [];
+
   return (
     <div className="relative">
       <div
@@ -119,6 +134,35 @@ export default function Waveform({
             : 'inset 0 2px 8px rgba(0, 0, 0, 0.5)'
         }}
       />
+
+      {/* Beat grid markers overlay */}
+      {beatMarkers.length > 0 && duration > 0 && (
+        <div className="absolute inset-0 pointer-events-none">
+          {beatMarkers.map((beatTime, index) => {
+            const position = (beatTime / duration) * 100;
+            const beatNumber = index + 1;
+            const isDownbeat = beatNumber % 4 === 1; // First beat of each bar
+
+            return (
+              <div
+                key={index}
+                className="absolute top-0 bottom-0"
+                style={{
+                  left: `${position}%`,
+                  width: isDownbeat ? '2px' : '1px',
+                  backgroundColor: isDownbeat
+                    ? accentColor === 'primary'
+                      ? 'rgba(34, 197, 94, 0.6)' // Green for downbeats
+                      : 'rgba(34, 197, 94, 0.6)'
+                    : accentColor === 'primary'
+                    ? 'rgba(59, 130, 246, 0.3)' // Blue for regular beats
+                    : 'rgba(168, 85, 247, 0.3)', // Purple for regular beats
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
