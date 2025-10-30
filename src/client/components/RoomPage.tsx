@@ -2,7 +2,7 @@
  * RoomPage component - Displays a room with real-time user presence and playlist
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   joinRoom,
@@ -22,9 +22,10 @@ import {
   TrackReorderedData,
   disconnectSocket,
 } from '../services/socket';
-import { usePlaylistStore } from '../stores/playlistStore';
+import { usePlaylistStore, type PlaylistTrack } from '../stores/playlistStore';
 import TrackList from './TrackList';
 import AddTrackForm from './AddTrackForm';
+import DeckPlayer from './DeckPlayer';
 
 // Temporary hardcoded user ID (DJ Alpha from seed data)
 // TODO: Replace with actual auth when Phase 2 is implemented
@@ -52,6 +53,31 @@ export default function RoomPage() {
   const updateTrack = usePlaylistStore((state) => state.updateTrack);
   const reorderTrack = usePlaylistStore((state) => state.reorderTrack);
   const reset = usePlaylistStore((state) => state.reset);
+
+  // Store load functions from deck components
+  const [deckLoadFunctions, setDeckLoadFunctions] = useState<{
+    A?: (track: PlaylistTrack) => void;
+    B?: (track: PlaylistTrack) => void;
+  }>({});
+
+  // Stable callbacks for deck load function registration
+  const onDeckALoadFunctionReady = useCallback((loadFn: (track: PlaylistTrack) => void) => {
+    setDeckLoadFunctions((prev) => ({ ...prev, A: loadFn }));
+  }, []);
+
+  const onDeckBLoadFunctionReady = useCallback((loadFn: (track: PlaylistTrack) => void) => {
+    setDeckLoadFunctions((prev) => ({ ...prev, B: loadFn }));
+  }, []);
+
+  // Handler for loading track to a specific deck
+  const handleLoadToDeck = (deckId: 'A' | 'B', track: PlaylistTrack) => {
+    const loadFn = deckLoadFunctions[deckId];
+    if (loadFn) {
+      loadFn(track);
+    } else {
+      console.error(`Load function for Deck ${deckId} not ready yet`);
+    }
+  };
 
   useEffect(() => {
     if (!roomId) {
@@ -170,7 +196,7 @@ export default function RoomPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-8">
+    <div className="max-w-7xl mx-auto p-8">
       {/* Header */}
       <div className="mb-8">
         <button
@@ -183,6 +209,20 @@ export default function RoomPage() {
         <p className="text-gray-400">
           Hosted by <span className="text-purple-400">{roomState.room.owner.name}</span>
         </p>
+      </div>
+
+      {/* Dual Deck Players */}
+      <div className="mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DeckPlayer
+            deckId="A"
+            onLoadFunctionReady={onDeckALoadFunctionReady}
+          />
+          <DeckPlayer
+            deckId="B"
+            onLoadFunctionReady={onDeckBLoadFunctionReady}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -229,7 +269,7 @@ export default function RoomPage() {
             <AddTrackForm roomId={roomId!} />
 
             {/* Track List */}
-            <TrackList roomId={roomId!} />
+            <TrackList roomId={roomId!} onLoadToDeck={handleLoadToDeck} />
           </div>
         </div>
       </div>

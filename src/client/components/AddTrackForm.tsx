@@ -72,11 +72,15 @@ export default function AddTrackForm({ roomId }: AddTrackFormProps) {
 
   const handleUploadComplete = (files: UploadedFile[]) => {
     // When file uploads complete, they're already added to the database
-    // Now emit socket event to add them to the playlist
+    // Now emit socket event to add them to the playlist using the existing trackId
+
+    // Capture base position once to avoid race conditions when state updates
+    const basePosition = tracks.length;
+
     files.forEach((uploadedFile, index) => {
       if (uploadedFile.trackId && uploadedFile.metadata) {
-        // Calculate position for each track: start from current playlist length + index
-        const nextPosition = tracks.length + index;
+        // Calculate position for each track: start from base position + index
+        const nextPosition = basePosition + index;
         addTrack(
           roomId,
           {
@@ -87,7 +91,8 @@ export default function AddTrackForm({ roomId }: AddTrackFormProps) {
             energy: undefined,
           },
           nextPosition,
-          undefined
+          undefined,
+          uploadedFile.trackId // Pass the existing trackId from upload
         );
       }
     });

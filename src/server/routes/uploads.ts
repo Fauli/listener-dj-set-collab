@@ -134,6 +134,17 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
 });
 
 /**
+ * OPTIONS /api/upload/:trackId/audio
+ * Handle preflight requests for CORS
+ */
+router.options('/:trackId/audio', (req: Request, res: Response) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Range');
+  res.status(204).send();
+});
+
+/**
  * GET /api/upload/:trackId/audio
  * Stream audio file for a specific track
  */
@@ -153,6 +164,9 @@ router.get('/:trackId/audio', async (req: Request, res: Response) => {
 
     const filePath = path.join('uploads', track.sourceURI);
 
+    // Extract file extension for Content-Type
+    const ext = path.extname(track.sourceURI).toLowerCase();
+
     // Check if file exists
     try {
       await fs.access(filePath);
@@ -167,6 +181,14 @@ router.get('/:trackId/audio', async (req: Request, res: Response) => {
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Content-Length', stat.size);
     res.setHeader('Accept-Ranges', 'bytes');
+    // Include filename with extension so Howler.js can detect codec
+    res.setHeader('Content-Disposition', `inline; filename="${path.basename(track.sourceURI)}"`);
+    // CORS headers for audio playback
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range');
+    // Expose Content-Disposition header for CORS
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
 
     // Stream the file
     const fileStream = await fs.readFile(filePath);

@@ -130,10 +130,17 @@ export function onTrackReordered(callback: (data: TrackReorderedData) => void) {
 
 /**
  * Emit add track event
+ * @param trackId - Optional: if provided, uses existing track (from upload) instead of creating new one
  */
-export function addTrack(roomId: string, track: Omit<Track, 'id' | 'createdAt'>, position: number, note?: string) {
+export function addTrack(
+  roomId: string,
+  track: Omit<Track, 'id' | 'createdAt'>,
+  position: number,
+  note?: string,
+  trackId?: string
+) {
   const sock = getSocket();
-  sock.emit('playlist:add-track', { roomId, track, position, note });
+  sock.emit('playlist:add-track', { roomId, trackId, track, position, note });
 }
 
 /**

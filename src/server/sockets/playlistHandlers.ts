@@ -17,6 +17,7 @@ import { ZodError } from 'zod';
 
 interface AddTrackData {
   roomId: string;
+  trackId?: string; // Optional: if provided, use existing track instead of creating new one
   track: {
     title: string;
     artist: string;
@@ -51,7 +52,7 @@ interface ReorderTrackData {
  */
 export async function handleAddTrack(io: Server, socket: Socket, data: AddTrackData) {
   try {
-    const { roomId, track, position, note } = data;
+    const { roomId, trackId, track, position, note } = data;
 
     // Validate room exists
     const room = await getRoomById(roomId);
@@ -60,16 +61,28 @@ export async function handleAddTrack(io: Server, socket: Socket, data: AddTrackD
       return;
     }
 
-    // Validate track data
-    const validatedTrack = createTrackSchema.parse(track);
+    let finalTrackId: string;
+    let trackTitle: string;
 
-    // Create track
-    const createdTrack = await createTrack(validatedTrack);
+    // If trackId is provided, use existing track (from upload)
+    // Otherwise, create a new track (for manual entry)
+    if (trackId) {
+      finalTrackId = trackId;
+      trackTitle = track.title;
+    } else {
+      // Validate track data
+      const validatedTrack = createTrackSchema.parse(track);
+
+      // Create new track
+      const createdTrack = await createTrack(validatedTrack);
+      finalTrackId = createdTrack.id;
+      trackTitle = createdTrack.title;
+    }
 
     // Add to playlist
     const setEntry = await addTrackToPlaylist({
       roomId,
-      trackId: createdTrack.id,
+      trackId: finalTrackId,
       position,
       note,
     });
@@ -80,7 +93,7 @@ export async function handleAddTrack(io: Server, socket: Socket, data: AddTrackD
     });
 
     // eslint-disable-next-line no-console
-    console.log(`Track "${createdTrack.title}" added to room ${roomId} at position ${position}`);
+    console.log(`Track "${trackTitle}" added to room ${roomId} at position ${position}`);
   } catch (error) {
     console.error('Error in handleAddTrack:', error);
 

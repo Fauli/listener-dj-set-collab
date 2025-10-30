@@ -20,37 +20,70 @@ export interface UpdateSetEntryData {
 /**
  * Add track to room playlist at specific position
  * Handles position conflicts by shifting existing tracks
+ * Retries with next position if conflict occurs (for concurrent inserts)
  */
 export async function addTrackToPlaylist(data: AddTrackToPlaylistData) {
-  // Shift existing tracks at or after this position
-  await prisma.setEntry.updateMany({
-    where: {
-      roomId: data.roomId,
-      position: {
-        gte: data.position,
-      },
-    },
-    data: {
-      position: {
-        increment: 1,
-      },
-    },
-  });
+  const MAX_RETRIES = 10;
+  let currentPosition = data.position;
+  let lastError: Error | null = null;
 
-  // Create new set entry
-  const setEntry = await prisma.setEntry.create({
-    data: {
-      roomId: data.roomId,
-      trackId: data.trackId,
-      position: data.position,
-      note: data.note,
-    },
-    include: {
-      track: true,
-    },
-  });
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      // Use transaction to make shift + insert atomic (prevents race conditions)
+      return await prisma.$transaction(async (tx) => {
+        // Shift existing tracks at or after this position
+        await tx.setEntry.updateMany({
+          where: {
+            roomId: data.roomId,
+            position: {
+              gte: currentPosition,
+            },
+          },
+          data: {
+            position: {
+              increment: 1,
+            },
+          },
+        });
 
-  return setEntry;
+        // Create new set entry
+        const setEntry = await tx.setEntry.create({
+          data: {
+            roomId: data.roomId,
+            trackId: data.trackId,
+            position: currentPosition,
+            note: data.note,
+          },
+          include: {
+            track: true,
+          },
+        });
+
+        return setEntry;
+      });
+    } catch (error) {
+      // Check if it's a unique constraint violation
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2002'
+      ) {
+        // Unique constraint failed - try next position
+        lastError = error as Error;
+        currentPosition++;
+        console.log(
+          `Position conflict at ${currentPosition - 1}, retrying with position ${currentPosition} (attempt ${attempt + 1}/${MAX_RETRIES})`
+        );
+        continue;
+      }
+      // Other error - throw immediately
+      throw error;
+    }
+  }
+
+  // If we get here, all retries failed
+  throw lastError || new Error('Failed to add track after maximum retries');
 }
 
 /**

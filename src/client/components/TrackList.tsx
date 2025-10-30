@@ -26,6 +26,7 @@ import { removeTrack, updateTrackNote, reorderTrack } from '../services/socket';
 
 interface TrackListProps {
   roomId: string;
+  onLoadToDeck?: (deckId: 'A' | 'B', track: PlaylistTrack) => void;
 }
 
 /**
@@ -41,6 +42,7 @@ function SortableTrackItem({
   onCancelEdit,
   onUpdateNoteValue,
   onRemove,
+  onLoadToDeck,
 }: {
   entry: PlaylistTrack;
   roomId: string;
@@ -51,6 +53,7 @@ function SortableTrackItem({
   onCancelEdit: () => void;
   onUpdateNoteValue: (value: string) => void;
   onRemove: () => void;
+  onLoadToDeck?: (deckId: 'A' | 'B', track: PlaylistTrack) => void;
 }) {
   const {
     attributes,
@@ -167,7 +170,33 @@ function SortableTrackItem({
         </div>
 
         {/* Actions */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 flex items-center gap-2">
+          {/* Load to Deck Buttons */}
+          {onLoadToDeck && (
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLoadToDeck('A', entry);
+                }}
+                className="px-2 py-1 rounded bg-primary-600/20 hover:bg-primary-600/40 text-primary-400 hover:text-primary-300 transition text-xs font-medium"
+                title="Load to Deck A"
+              >
+                ▶ A
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLoadToDeck('B', entry);
+                }}
+                className="px-2 py-1 rounded bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 hover:text-purple-300 transition text-xs font-medium"
+                title="Load to Deck B"
+              >
+                ▶ B
+              </button>
+            </div>
+          )}
+
           <button
             onClick={onRemove}
             className="text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-900/20 transition"
@@ -193,7 +222,7 @@ function SortableTrackItem({
   );
 }
 
-export default function TrackList({ roomId }: TrackListProps) {
+export default function TrackList({ roomId, onLoadToDeck }: TrackListProps) {
   const tracks = usePlaylistStore((state) => state.tracks);
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [noteValue, setNoteValue] = useState('');
@@ -284,6 +313,7 @@ export default function TrackList({ roomId }: TrackListProps) {
                 onCancelEdit={handleCancelEdit}
                 onUpdateNoteValue={setNoteValue}
                 onRemove={() => handleRemove(entry.id)}
+                onLoadToDeck={onLoadToDeck}
               />
             ))}
           </div>
