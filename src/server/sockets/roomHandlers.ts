@@ -53,8 +53,12 @@ export async function handleJoinRoom(io: Server, socket: Socket, data: JoinRoomD
       })),
       tracks: room.setEntries.map((entry) => ({
         id: entry.id,
+        roomId: entry.roomId,
+        trackId: entry.trackId,
         position: entry.position,
         note: entry.note,
+        cuePoints: entry.cuePoints, // Include cue points!
+        createdAt: entry.createdAt,
         track: entry.track,
       })),
     });

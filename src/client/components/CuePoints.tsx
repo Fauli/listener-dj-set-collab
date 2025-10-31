@@ -94,28 +94,43 @@ export default function CuePoints({
         const isSet = cueTime !== null;
 
         return (
-          <button
-            key={cueType}
-            onClick={(e) => handleCueClick(cueType, e)}
-            onContextMenu={(e) => handleContextMenu(cueType, e)}
-            className={`flex flex-col items-center justify-center px-1.5 py-1 rounded text-xs font-medium transition-all ${
-              isSet
-                ? `${config.color} ${config.hoverColor} text-white shadow-sm`
-                : `bg-gray-700 hover:bg-gray-600 ${config.textColor} border ${config.borderColor}`
-            }`}
-            title={
-              isSet
-                ? `Jump to ${config.label} cue (${formatTime(cueTime)})\nShift+Click or Right-Click to delete`
-                : `Set ${config.label} cue at current position`
-            }
-          >
-            <div className="font-bold leading-none">{config.label}</div>
+          <div key={cueType} className="relative group">
+            <button
+              onClick={(e) => handleCueClick(cueType, e)}
+              onContextMenu={(e) => handleContextMenu(cueType, e)}
+              className={`flex flex-col items-center justify-center px-1.5 py-1 rounded text-xs font-medium transition-all ${
+                isSet
+                  ? `${config.color} ${config.hoverColor} text-white shadow-sm`
+                  : `bg-gray-700 hover:bg-gray-600 ${config.textColor} border ${config.borderColor}`
+              }`}
+              title={
+                isSet
+                  ? `Jump to ${config.label} cue (${formatTime(cueTime)})`
+                  : `Set ${config.label} cue at current position`
+              }
+            >
+              <div className="font-bold leading-none">{config.label}</div>
+              {isSet && (
+                <div className="text-[9px] leading-tight opacity-90 mt-0.5">
+                  {formatTime(cueTime)}
+                </div>
+              )}
+            </button>
+
+            {/* Delete button - only visible on hover when cue is set */}
             {isSet && (
-              <div className="text-[9px] leading-tight opacity-90 mt-0.5">
-                {formatTime(cueTime)}
-              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteCue(cueType);
+                }}
+                className="absolute -top-1 -right-1 w-4 h-4 bg-gray-900 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg text-[10px] font-bold"
+                title={`Delete ${config.label} cue`}
+              >
+                ×
+              </button>
             )}
-          </button>
+          </div>
         );
       })}
     </div>

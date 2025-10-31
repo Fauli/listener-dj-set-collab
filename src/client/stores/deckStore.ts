@@ -86,7 +86,10 @@ export const useDeckStore = create<DeckStoreState>((set, get) => ({
   deckB: { ...initialDeckState },
   crossfaderPosition: 0, // Start at center (50/50 mix)
 
-  loadTrack: (deckId, track) =>
+  loadTrack: (deckId, track) => {
+    console.log(`[DeckStore] Loading track to deck ${deckId}:`, track);
+    console.log(`[DeckStore] Track cuePoints:`, track.cuePoints);
+
     set((state) => ({
       [deckId === 'A' ? 'deckA' : 'deckB']: {
         ...state[deckId === 'A' ? 'deckA' : 'deckB'],
@@ -109,7 +112,11 @@ export const useDeckStore = create<DeckStoreState>((set, get) => ({
           B: null,
         },
       },
-    })),
+    }));
+
+    console.log(`[DeckStore] Loaded cuePoints for deck ${deckId}:`,
+      track.cuePoints ? track.cuePoints : 'none');
+  },
 
   unloadTrack: (deckId) =>
     set((state) => ({
