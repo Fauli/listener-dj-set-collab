@@ -163,7 +163,7 @@ export default function ZoomedWaveform({
       ctx.fillRect(x, y, barWidth, barHeight);
     });
 
-  }, [currentTime, duration, audioPeaks, peaksPerSecond, zoomWindowSeconds, waveColor]);
+  }, [currentTime, duration, audioPeaks, peaksPerSecond, zoomWindowSeconds, waveColor, rate]);
 
   // Calculate beat markers
   const halfWindow = zoomWindowSeconds / 2;
@@ -172,7 +172,7 @@ export default function ZoomedWaveform({
 
   const beatMarkers =
     firstBeatTime !== null && bpm !== null && duration > 0
-      ? getBeatsInRange(visibleWindowStart, visibleWindowEnd, { firstBeatTime, bpm, rate })
+      ? getBeatsInRange(visibleWindowStart, visibleWindowEnd, { firstBeatTime, bpm })
       : [];
 
   const containerWidth = canvasRef.current?.offsetWidth || 0;
@@ -188,7 +188,7 @@ export default function ZoomedWaveform({
     const offsetFromStart = beatTime - visibleWindowStart;
     const viewportPosition = offsetPixels + offsetFromStart * pixelsPerSecond;
 
-    const beatNumber = Math.round((beatTime - firstBeatTime!) / (60 / (bpm! * rate))) + 1;
+    const beatNumber = Math.round((beatTime - firstBeatTime!) / (60 / bpm!)) + 1;
     return {
       time: beatTime,
       viewportPosition,

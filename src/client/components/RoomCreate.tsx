@@ -31,10 +31,13 @@ export default function RoomCreate() {
         ownerId: TEMP_USER_ID,
       });
 
+      // Construct correct frontend URL instead of using backend URL
+      const frontendJoinLink = `${window.location.origin}/rooms/${response.room.id}`;
+
       setCreatedRoom({
         id: response.room.id,
         name: response.room.name,
-        joinLink: response.joinLink,
+        joinLink: frontendJoinLink,
       });
       setRoomName(''); // Reset form
     } catch (err) {

@@ -59,6 +59,7 @@ export default function RoomPage() {
   // Deck store for crossfader
   const crossfaderPosition = useDeckStore((state) => state.crossfaderPosition);
   const setCrossfaderPosition = useDeckStore((state) => state.setCrossfaderPosition);
+  const resetDeck = useDeckStore((state) => state.reset);
 
   // Store load functions from deck components
   const [deckLoadFunctions, setDeckLoadFunctions] = useState<{
@@ -170,8 +171,10 @@ export default function RoomPage() {
       unsubscribeTrackReordered();
       disconnectSocket();
       reset(); // Clear playlist store
+      resetDeck('A'); // Clear Deck A
+      resetDeck('B'); // Clear Deck B
     };
-  }, [roomId, setTracks, addTrack, removeTrack, updateTrack, reorderTrack, reset]);
+  }, [roomId, setTracks, addTrack, removeTrack, updateTrack, reorderTrack, reset, resetDeck]);
 
   if (loading) {
     return (
@@ -202,15 +205,24 @@ export default function RoomPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-8">
+    <div className="max-w-7xl mx-auto p-8 relative">
+      {/* Logo - positioned absolutely to not take up space */}
+      <img
+        src="/listener-logo.png"
+        alt="Listener"
+        className="absolute top-1 right-8 h-40 w-auto opacity-60"
+      />
+
       {/* Header */}
       <div className="mb-8">
-        <button
-          onClick={() => navigate('/')}
-          className="text-gray-400 hover:text-white mb-4 transition-colors"
-        >
-          ← Back to Home
-        </button>
+        <div className="mb-4">
+          <button
+            onClick={() => navigate('/')}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            ← Back to Home
+          </button>
+        </div>
         <h1 className="text-3xl font-bold mb-2">{roomState.room.name}</h1>
         <p className="text-gray-400">
           Hosted by <span className="text-purple-400">{roomState.room.owner.name}</span>
@@ -219,21 +231,12 @@ export default function RoomPage() {
 
       {/* Dual Deck Players - Stacked Vertically */}
       <div className="mb-4 space-y-2">
-        <DeckPlayer
-          deckId="A"
-          onLoadFunctionReady={onDeckALoadFunctionReady}
-        />
+        <DeckPlayer deckId="A" onLoadFunctionReady={onDeckALoadFunctionReady} />
 
         {/* Crossfader - between decks */}
-        <Crossfader
-          position={crossfaderPosition}
-          onChange={setCrossfaderPosition}
-        />
+        <Crossfader position={crossfaderPosition} onChange={setCrossfaderPosition} />
 
-        <DeckPlayer
-          deckId="B"
-          onLoadFunctionReady={onDeckBLoadFunctionReady}
-        />
+        <DeckPlayer deckId="B" onLoadFunctionReady={onDeckBLoadFunctionReady} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -252,19 +255,14 @@ export default function RoomPage() {
                 <p className="text-gray-500 text-sm">No one here yet...</p>
               ) : (
                 roomState.users.map((user: User) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center p-3 bg-gray-700/50 rounded-lg"
-                  >
+                  <div key={user.id} className="flex items-center p-3 bg-gray-700/50 rounded-lg">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-3 animate-pulse"></div>
                     <div className="flex-1">
                       <p className="font-medium">{user.name}</p>
                       <p className="text-xs text-gray-400">{user.role}</p>
                     </div>
                     {user.id === roomState.room.owner.id && (
-                      <span className="text-xs bg-purple-600 px-2 py-1 rounded">
-                        Owner
-                      </span>
+                      <span className="text-xs bg-purple-600 px-2 py-1 rounded">Owner</span>
                     )}
                   </div>
                 ))

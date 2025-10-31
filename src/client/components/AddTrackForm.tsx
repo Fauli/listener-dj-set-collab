@@ -70,32 +70,83 @@ export default function AddTrackForm({ roomId }: AddTrackFormProps) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleUploadComplete = (files: UploadedFile[]) => {
-    // When file uploads complete, they're already added to the database
-    // Now emit socket event to add them to the playlist using the existing trackId
+  // Queue system to ensure tracks are added in selection order
+  const [uploadQueue] = useState<{
+    queue: Array<{ order: number; fileId: string; file: UploadedFile | null }>;
+    nextToEmit: number;
+  }>({
+    queue: [],
+    nextToEmit: 0,
+  });
 
-    // Capture base position once to avoid race conditions when state updates
-    const basePosition = tracks.length;
+  const handleFilesSelected = (files: UploadedFile[]) => {
+    // Create queue entries for each file in selection order
+    const baseOrder = uploadQueue.queue.length;
 
     files.forEach((uploadedFile, index) => {
-      if (uploadedFile.trackId && uploadedFile.metadata) {
-        // Calculate position for each track: start from base position + index
-        const nextPosition = basePosition + index;
-        addTrack(
-          roomId,
-          {
-            title: uploadedFile.metadata.title,
-            artist: uploadedFile.metadata.artist,
-            bpm: uploadedFile.metadata.bpm,
-            key: uploadedFile.metadata.key,
-            energy: undefined,
-          },
-          nextPosition,
-          undefined,
-          uploadedFile.trackId // Pass the existing trackId from upload
+      uploadQueue.queue.push({
+        order: baseOrder + index,
+        fileId: uploadedFile.id, // Store file ID for matching later
+        file: null, // Will be set when upload completes
+      });
+    });
+  };
+
+  const processQueue = () => {
+    // Process all completed files in order, emitting WebSocket events sequentially
+    let emittedInThisCall = 0; // Track how many we've emitted in this call
+
+    while (uploadQueue.nextToEmit < uploadQueue.queue.length) {
+      const entry = uploadQueue.queue[uploadQueue.nextToEmit];
+
+      // If this file hasn't completed yet, stop processing
+      if (!entry.file || !entry.file.trackId || !entry.file.metadata) {
+        break;
+      }
+
+      // Calculate position: current playlist length + files emitted so far in this call
+      // This ensures each file gets a unique, sequential position even though
+      // the WebSocket state updates are asynchronous
+      const nextPosition = tracks.length + emittedInThisCall;
+
+      // Emit WebSocket event to add track
+      addTrack(
+        roomId,
+        {
+          title: entry.file.metadata.title,
+          artist: entry.file.metadata.artist,
+          bpm: entry.file.metadata.bpm,
+          key: entry.file.metadata.key,
+          energy: undefined,
+        },
+        nextPosition,
+        undefined,
+        entry.file.trackId
+      );
+
+      // Move to next file in queue
+      uploadQueue.nextToEmit++;
+      emittedInThisCall++; // Increment for each emission
+    }
+  };
+
+  const handleUploadComplete = (files: UploadedFile[]) => {
+    // When a file upload completes, find it in the queue and mark it complete
+    files.forEach((completedFile) => {
+      if (completedFile.trackId && completedFile.metadata) {
+        // Find this file in the queue by matching file ID
+        const queueEntry = uploadQueue.queue.find(
+          (entry) => entry.fileId === completedFile.id
         );
+
+        if (queueEntry) {
+          queueEntry.file = completedFile;
+        }
       }
     });
+
+    // Process the queue to emit events in order
+    processQueue();
   };
 
   if (!isExpanded) {
@@ -176,7 +227,11 @@ export default function AddTrackForm({ roomId }: AddTrackFormProps) {
 
       {/* Tab Content */}
       {activeTab === 'upload' && (
-        <FileUpload roomId={roomId} onUploadComplete={handleUploadComplete} />
+        <FileUpload
+          roomId={roomId}
+          onFilesSelected={handleFilesSelected}
+          onUploadComplete={handleUploadComplete}
+        />
       )}
 
       {activeTab === 'manual' && (

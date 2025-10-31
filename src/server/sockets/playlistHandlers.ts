@@ -15,6 +15,39 @@ import { getRoomById } from '../models/Room.js';
 import { createTrackSchema } from '../validators/trackSchemas.js';
 import { ZodError } from 'zod';
 
+/**
+ * Operation queue to ensure sequential processing per room
+ * Prevents race conditions when multiple tracks are added concurrently
+ */
+class RoomOperationQueue {
+  private queues = new Map<string, Promise<unknown>>();
+
+  /**
+   * Execute an operation sequentially for a given room
+   */
+  async executeForRoom<T>(roomId: string, operation: () => Promise<T>): Promise<T> {
+    // Get or create the promise chain for this room
+    const existingChain = this.queues.get(roomId) || Promise.resolve();
+
+    // Chain the new operation after existing ones
+    const newChain = existingChain
+      .then(() => operation())
+      .catch((error) => {
+        // Log error but don't break the chain
+        console.error(`Operation failed for room ${roomId}:`, error);
+        throw error;
+      });
+
+    // Store the promise (without the result)
+    this.queues.set(roomId, newChain.catch(() => {}));
+
+    // Return the result of this specific operation
+    return newChain;
+  }
+}
+
+const operationQueue = new RoomOperationQueue();
+
 interface AddTrackData {
   roomId: string;
   trackId?: string; // Optional: if provided, use existing track instead of creating new one
@@ -49,75 +82,82 @@ interface ReorderTrackData {
 
 /**
  * Handle adding a track to the playlist
+ * Uses operation queue to ensure tracks are added sequentially per room
  */
 export async function handleAddTrack(io: Server, socket: Socket, data: AddTrackData) {
-  try {
-    const { roomId, trackId, track, position, note } = data;
+  const { roomId } = data;
 
-    // Validate room exists
-    const room = await getRoomById(roomId);
-    if (!room) {
-      socket.emit('error', { message: 'Room not found' });
-      return;
-    }
+  // Queue this operation for the room to prevent concurrent inserts
+  return operationQueue.executeForRoom(roomId, async () => {
+    try {
+      const { trackId, track, position, note } = data;
 
-    let finalTrackId: string;
-    let trackTitle: string;
+      // Validate room exists
+      const room = await getRoomById(roomId);
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
 
-    // If trackId is provided, use existing track (from upload)
-    // Otherwise, create a new track (for manual entry)
-    if (trackId) {
-      finalTrackId = trackId;
-      trackTitle = track.title;
-    } else {
-      // Validate track data
-      const validatedTrack = createTrackSchema.parse(track);
+      let finalTrackId: string;
+      let trackTitle: string;
 
-      // Create new track
-      const createdTrack = await createTrack(validatedTrack);
-      finalTrackId = createdTrack.id;
-      trackTitle = createdTrack.title;
-    }
+      // If trackId is provided, use existing track (from upload)
+      // Otherwise, create a new track (for manual entry)
+      if (trackId) {
+        finalTrackId = trackId;
+        trackTitle = track.title;
+      } else {
+        // Validate track data
+        const validatedTrack = createTrackSchema.parse(track);
 
-    // Add to playlist
-    const setEntry = await addTrackToPlaylist({
-      roomId,
-      trackId: finalTrackId,
-      position,
-      note,
-    });
+        // Create new track
+        const createdTrack = await createTrack(validatedTrack);
+        finalTrackId = createdTrack.id;
+        trackTitle = createdTrack.title;
+      }
 
-    // Broadcast to all users in the room (including sender)
-    io.to(roomId).emit('playlist:track-added', {
-      setEntry,
-    });
-
-    // eslint-disable-next-line no-console
-    console.log(`Track "${trackTitle}" added to room ${roomId} at position ${position}`);
-  } catch (error) {
-    console.error('Error in handleAddTrack:', error);
-
-    if (error instanceof ZodError) {
-      socket.emit('error', {
-        message: 'Invalid track data',
-        details: error.issues.map((i) => i.message).join(', '),
+      // Add to playlist
+      const setEntry = await addTrackToPlaylist({
+        roomId,
+        trackId: finalTrackId,
+        position,
+        note,
       });
-    } else {
-      socket.emit('error', {
-        message: 'Failed to add track',
-        details: error instanceof Error ? error.message : 'Unknown error',
+
+      // Broadcast to all users in the room (including sender)
+      io.to(roomId).emit('playlist:track-added', {
+        setEntry,
       });
+
+      // eslint-disable-next-line no-console
+      console.log(`Track "${trackTitle}" added to room ${roomId} at position ${position}`);
+    } catch (error) {
+      console.error('Error in handleAddTrack:', error);
+
+      if (error instanceof ZodError) {
+        socket.emit('error', {
+          message: 'Invalid track data',
+          details: error.issues.map((i) => i.message).join(', '),
+        });
+      } else {
+        socket.emit('error', {
+          message: 'Failed to add track',
+          details: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
     }
-  }
+  });
 }
 
 /**
  * Handle removing a track from the playlist
+ * Made idempotent - if track is already deleted, still broadcast for sync
  */
 export async function handleRemoveTrack(io: Server, socket: Socket, data: RemoveTrackData) {
-  try {
-    const { roomId, entryId } = data;
+  const { roomId, entryId } = data;
 
+  try {
     // Validate room exists
     const room = await getRoomById(roomId);
     if (!room) {
@@ -138,10 +178,24 @@ export async function handleRemoveTrack(io: Server, socket: Socket, data: Remove
     console.log(`Track removed from room ${roomId} (entry: ${entryId})`);
   } catch (error) {
     console.error('Error in handleRemoveTrack:', error);
-    socket.emit('error', {
-      message: 'Failed to remove track',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
+
+    // If track not found (already deleted), treat as success and broadcast anyway
+    // This makes delete idempotent and ensures all clients stay in sync
+    if (error instanceof Error && error.message === 'Set entry not found') {
+      // Still broadcast removal to keep clients in sync
+      io.to(roomId).emit('playlist:track-removed', {
+        entryId,
+        position: -1, // Position unknown since already deleted
+      });
+      // eslint-disable-next-line no-console
+      console.log(`Track ${entryId} already deleted in room ${roomId}, broadcasting anyway for sync`);
+    } else {
+      // Other errors: emit to requesting client only
+      socket.emit('error', {
+        message: 'Failed to remove track',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   }
 }
 
@@ -180,46 +234,52 @@ export async function handleUpdateNote(io: Server, socket: Socket, data: UpdateN
 
 /**
  * Handle reordering a track in the playlist
+ * Uses operation queue to ensure sequential processing per room
  */
 export async function handleReorder(io: Server, socket: Socket, data: ReorderTrackData) {
-  try {
-    const { roomId, entryId, newPosition } = data;
+  const { roomId } = data;
 
-    // Validate room exists
-    const room = await getRoomById(roomId);
-    if (!room) {
-      socket.emit('error', { message: 'Room not found' });
-      return;
+  // Queue this operation for the room to prevent concurrent reorders
+  return operationQueue.executeForRoom(roomId, async () => {
+    try {
+      const { entryId, newPosition } = data;
+
+      // Validate room exists
+      const room = await getRoomById(roomId);
+      if (!room) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+
+      // Get old position before update
+      const playlist = await getPlaylistByRoom(roomId);
+      const entry = playlist.find((e) => e.id === entryId);
+      const oldPosition = entry?.position ?? -1;
+
+      // Reorder track (uses transaction internally)
+      await updatePosition(entryId, newPosition);
+
+      // Broadcast new playlist order to all users
+      // We send the entire updated playlist to ensure consistency
+      const updatedPlaylist = await getPlaylistByRoom(roomId);
+
+      io.to(roomId).emit('playlist:track-reordered', {
+        entryId,
+        oldPosition,
+        newPosition,
+        playlist: updatedPlaylist,
+      });
+
+      // eslint-disable-next-line no-console
+      console.log(`Track reordered in room ${roomId}: ${oldPosition} → ${newPosition}`);
+    } catch (error) {
+      console.error('Error in handleReorder:', error);
+      socket.emit('error', {
+        message: 'Failed to reorder track',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
-
-    // Get old position before update
-    const playlist = await getPlaylistByRoom(roomId);
-    const entry = playlist.find((e) => e.id === entryId);
-    const oldPosition = entry?.position ?? -1;
-
-    // Reorder track (uses transaction internally)
-    await updatePosition(entryId, newPosition);
-
-    // Broadcast new playlist order to all users
-    // We send the entire updated playlist to ensure consistency
-    const updatedPlaylist = await getPlaylistByRoom(roomId);
-
-    io.to(roomId).emit('playlist:track-reordered', {
-      entryId,
-      oldPosition,
-      newPosition,
-      playlist: updatedPlaylist,
-    });
-
-    // eslint-disable-next-line no-console
-    console.log(`Track reordered in room ${roomId}: ${oldPosition} → ${newPosition}`);
-  } catch (error) {
-    console.error('Error in handleReorder:', error);
-    socket.emit('error', {
-      message: 'Failed to reorder track',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
+  });
 }
 
 /**

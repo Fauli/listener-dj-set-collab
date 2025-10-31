@@ -64,7 +64,6 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
       cueTime = quantizeToNearestBeat(deck.currentTime, {
         firstBeatTime: deck.firstBeatTime,
         bpm: deck.track.track.bpm,
-        rate: deck.rate,
       });
     }
     setCuePoint(deckId, cueType, cueTime);

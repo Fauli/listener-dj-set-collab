@@ -213,9 +213,11 @@ export async function updatePosition(entryId: string, newPosition: number) {
     }
 
     // Step 1: Move the entry to a temporary negative position to avoid conflicts
+    // Use unique temporary position to prevent concurrent reorder conflicts
+    const tempPosition = -(Date.now() + Math.floor(Math.random() * 1000000));
     await tx.setEntry.update({
       where: { id: entryId },
-      data: { position: -1 },
+      data: { position: tempPosition },
     });
 
     // Step 2: Shift other tracks based on direction of movement
