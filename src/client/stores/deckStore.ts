@@ -6,6 +6,13 @@
 import { create } from 'zustand';
 import type { PlaylistTrack } from './playlistStore';
 
+export interface CuePoints {
+  start: number | null;
+  end: number | null;
+  A: number | null;
+  B: number | null;
+}
+
 export interface DeckState {
   track: PlaylistTrack | null;
   isPlaying: boolean;
@@ -21,6 +28,7 @@ export interface DeckState {
   isLoading: boolean;
   error: string | null;
   firstBeatTime: number | null; // Time in seconds where beat 1 occurs (for beat grid)
+  cuePoints: CuePoints; // Cue points for quick navigation
 }
 
 interface DeckStoreState {
@@ -44,6 +52,7 @@ interface DeckStoreState {
   setLoading: (deckId: 'A' | 'B', loading: boolean) => void;
   setError: (deckId: 'A' | 'B', error: string | null) => void;
   setFirstBeatTime: (deckId: 'A' | 'B', time: number | null) => void;
+  setCuePoint: (deckId: 'A' | 'B', cueType: keyof CuePoints, time: number | null) => void;
   reset: (deckId: 'A' | 'B') => void;
   setCrossfaderPosition: (position: number) => void;
   getCrossfaderVolume: (deckId: 'A' | 'B') => number;
@@ -64,6 +73,12 @@ const initialDeckState: DeckState = {
   isLoading: false,
   error: null,
   firstBeatTime: null, // No beat grid by default
+  cuePoints: {
+    start: null,
+    end: null,
+    A: null,
+    B: null,
+  },
 };
 
 export const useDeckStore = create<DeckStoreState>((set, get) => ({
@@ -196,6 +211,17 @@ export const useDeckStore = create<DeckStoreState>((set, get) => ({
       [deckId === 'A' ? 'deckA' : 'deckB']: {
         ...state[deckId === 'A' ? 'deckA' : 'deckB'],
         firstBeatTime: time,
+      },
+    })),
+
+  setCuePoint: (deckId, cueType, time) =>
+    set((state) => ({
+      [deckId === 'A' ? 'deckA' : 'deckB']: {
+        ...state[deckId === 'A' ? 'deckA' : 'deckB'],
+        cuePoints: {
+          ...state[deckId === 'A' ? 'deckA' : 'deckB'].cuePoints,
+          [cueType]: time,
+        },
       },
     })),
 

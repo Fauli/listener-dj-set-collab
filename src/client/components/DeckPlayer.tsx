@@ -6,6 +6,8 @@ import { useState, useEffect } from 'react';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useDeckStore } from '../stores/deckStore';
 import type { PlaylistTrack } from '../stores/playlistStore';
+import type { CuePoints as CuePointsType } from '../stores/deckStore';
+import { quantizeToNearestBeat } from '../utils/beatGrid';
 import TrackInfo from './TrackInfo';
 import Waveform from './Waveform';
 import ZoomedWaveform from './ZoomedWaveform';
@@ -13,6 +15,7 @@ import SeekBar from './SeekBar';
 import TransportControls from './TransportControls';
 import Knob from './Knob';
 import BeatGridControl from './BeatGridControl';
+import CuePoints from './CuePoints';
 import TrackSelectorModal from './TrackSelectorModal';
 
 interface DeckPlayerProps {
@@ -24,6 +27,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
   const [showTrackSelector, setShowTrackSelector] = useState(false);
   const { deck, load, play, pause, stop, seek, changeVolume, toggleLoop, changeRate, changeEQLow, changeEQMid, changeEQHigh, unload } = useAudioPlayer(deckId);
   const setFirstBeatTime = useDeckStore((state) => state.setFirstBeatTime);
+  const setCuePoint = useDeckStore((state) => state.setCuePoint);
 
   const accentColor = deckId === 'A' ? 'primary' : 'purple';
   const borderColor = deckId === 'A' ? 'border-primary-600/30' : 'border-purple-600/30';
@@ -51,6 +55,26 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
 
   const handleClearBeatGrid = () => {
     setFirstBeatTime(deckId, null);
+  };
+
+  const handleSetCue = (cueType: keyof CuePointsType) => {
+    // Snap to nearest beat if beat grid is set
+    let cueTime = deck.currentTime;
+    if (deck.firstBeatTime !== null && deck.track?.track.bpm) {
+      cueTime = quantizeToNearestBeat(deck.currentTime, {
+        firstBeatTime: deck.firstBeatTime,
+        bpm: deck.track.track.bpm,
+        rate: deck.rate,
+      });
+    }
+    setCuePoint(deckId, cueType, cueTime);
+  };
+
+  const handleJumpToCue = (cueType: keyof CuePointsType) => {
+    const cueTime = deck.cuePoints[cueType];
+    if (cueTime !== null) {
+      seek(cueTime);
+    }
   };
 
   const audioUrl = deck.track ? `http://localhost:3000/api/upload/${deck.track.track.id}/audio` : null;
@@ -146,6 +170,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                 bpm={deck.track?.track.bpm}
                 rate={deck.rate}
                 duration={deck.duration}
+                cuePoints={deck.cuePoints}
               />
             ) : (
               <div className="h-[50px] bg-gray-900/50 rounded flex items-center justify-center">
@@ -168,6 +193,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                 rate={deck.rate}
                 duration={deck.duration}
                 zoomWindowSeconds={20}
+                cuePoints={deck.cuePoints}
               />
             ) : (
               <div className="h-[60px] bg-gray-900/50 rounded flex items-center justify-center">
@@ -276,6 +302,16 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                   onSetBeatGrid={handleSetBeatGrid}
                   onClearBeatGrid={handleClearBeatGrid}
                   accentColor={accentColor}
+                />
+              </div>
+
+              {/* Cue Points */}
+              <div className="flex-shrink-0">
+                <CuePoints
+                  cuePoints={deck.cuePoints}
+                  currentTime={deck.currentTime}
+                  onSetCue={handleSetCue}
+                  onJumpToCue={handleJumpToCue}
                 />
               </div>
             </div>

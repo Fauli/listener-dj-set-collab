@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { getBeatsInRange } from '../utils/beatGrid';
+import type { CuePoints } from '../stores/deckStore';
 
 interface ZoomedWaveformProps {
   audioUrl: string | null;
@@ -18,6 +19,7 @@ interface ZoomedWaveformProps {
   rate?: number;
   duration?: number;
   zoomWindowSeconds?: number;
+  cuePoints?: CuePoints;
 }
 
 export default function ZoomedWaveform({
@@ -31,6 +33,7 @@ export default function ZoomedWaveform({
   rate = 1.0,
   duration = 0,
   zoomWindowSeconds = 20,
+  cuePoints,
 }: ZoomedWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hiddenContainerRef = useRef<HTMLDivElement>(null);
@@ -263,6 +266,56 @@ export default function ZoomedWaveform({
               }}
             />
           ))}
+        </div>
+      )}
+
+      {/* Cue point markers overlay */}
+      {cuePoints && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {Object.entries(cuePoints).map(([cueType, cueTime]) => {
+            if (cueTime === null) return null;
+
+            // Check if cue is in visible window
+            if (cueTime < visibleWindowStart || cueTime > visibleWindowEnd) return null;
+
+            // Calculate viewport position with offset (same logic as beat grid)
+            const offsetFromStart = cueTime - visibleWindowStart;
+            const viewportPosition = offsetPixels + offsetFromStart * pixelsPerSecond;
+
+            // Color config for each cue type
+            const cueColors = {
+              start: { bg: 'rgba(34, 197, 94, 1)', shadow: 'rgba(34, 197, 94, 0.8)' }, // Green
+              end: { bg: 'rgba(239, 68, 68, 1)', shadow: 'rgba(239, 68, 68, 0.8)' }, // Red
+              A: { bg: 'rgba(59, 130, 246, 1)', shadow: 'rgba(59, 130, 246, 0.8)' }, // Blue
+              B: { bg: 'rgba(168, 85, 247, 1)', shadow: 'rgba(168, 85, 247, 0.8)' }, // Purple
+            };
+
+            const colors = cueColors[cueType as keyof typeof cueColors];
+
+            return (
+              <div
+                key={cueType}
+                className="absolute top-0 bottom-0 z-20"
+                style={{
+                  left: `${viewportPosition}px`,
+                  width: '4px',
+                  backgroundColor: colors.bg,
+                  boxShadow: `0 0 10px ${colors.shadow}`,
+                }}
+              >
+                {/* Label at top */}
+                <div
+                  className="absolute -top-1 left-1/2 -translate-x-1/2 text-[10px] font-bold px-1 rounded"
+                  style={{
+                    backgroundColor: colors.bg,
+                    color: 'white',
+                  }}
+                >
+                  {cueType}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

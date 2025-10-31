@@ -3,7 +3,7 @@
  * Saves vertical space compared to sliders
  */
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 
 interface KnobProps {
   label: string;
@@ -75,7 +75,7 @@ export default function Knob({
   }, []);
 
   // Global mouse event listeners
-  useState(() => {
+  useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
@@ -84,7 +84,7 @@ export default function Knob({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  });
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   // Format display value
   const displayValue = () => {

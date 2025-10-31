@@ -4,6 +4,7 @@
 
 import { useEffect, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
+import type { CuePoints } from '../stores/deckStore';
 
 interface WaveformProps {
   audioUrl: string | null;
@@ -15,6 +16,7 @@ interface WaveformProps {
   bpm?: number | null;
   rate?: number;
   duration?: number;
+  cuePoints?: CuePoints;
 }
 
 export default function Waveform({
@@ -27,6 +29,7 @@ export default function Waveform({
   bpm = null,
   rate = 1.0,
   duration = 0,
+  cuePoints,
 }: WaveformProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -127,6 +130,41 @@ export default function Waveform({
             : 'inset 0 2px 8px rgba(0, 0, 0, 0.5)'
         }}
       />
+
+      {/* Cue point markers overlay */}
+      {cuePoints && duration > 0 && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {Object.entries(cuePoints).map(([cueType, cueTime]) => {
+            if (cueTime === null) return null;
+
+            // Calculate position as percentage of total duration
+            const positionPercent = (cueTime / duration) * 100;
+
+            // Color config for each cue type
+            const cueColors = {
+              start: { bg: 'rgba(34, 197, 94, 1)', shadow: 'rgba(34, 197, 94, 0.8)' }, // Green
+              end: { bg: 'rgba(239, 68, 68, 1)', shadow: 'rgba(239, 68, 68, 0.8)' }, // Red
+              A: { bg: 'rgba(59, 130, 246, 1)', shadow: 'rgba(59, 130, 246, 0.8)' }, // Blue
+              B: { bg: 'rgba(168, 85, 247, 1)', shadow: 'rgba(168, 85, 247, 0.8)' }, // Purple
+            };
+
+            const colors = cueColors[cueType as keyof typeof cueColors];
+
+            return (
+              <div
+                key={cueType}
+                className="absolute top-0 bottom-0 z-20"
+                style={{
+                  left: `${positionPercent}%`,
+                  width: '3px',
+                  backgroundColor: colors.bg,
+                  boxShadow: `0 0 6px ${colors.shadow}`,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
