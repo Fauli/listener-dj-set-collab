@@ -217,26 +217,23 @@ export default function RoomPage() {
         </p>
       </div>
 
-      {/* Dual Deck Players */}
-      <div className="mb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <DeckPlayer
-            deckId="A"
-            onLoadFunctionReady={onDeckALoadFunctionReady}
-          />
-          <DeckPlayer
-            deckId="B"
-            onLoadFunctionReady={onDeckBLoadFunctionReady}
-          />
-        </div>
+      {/* Dual Deck Players - Stacked Vertically */}
+      <div className="mb-4 space-y-2">
+        <DeckPlayer
+          deckId="A"
+          onLoadFunctionReady={onDeckALoadFunctionReady}
+        />
 
-        {/* Crossfader - positioned below decks */}
-        <div className="mt-6">
-          <Crossfader
-            position={crossfaderPosition}
-            onChange={setCrossfaderPosition}
-          />
-        </div>
+        {/* Crossfader - between decks */}
+        <Crossfader
+          position={crossfaderPosition}
+          onChange={setCrossfaderPosition}
+        />
+
+        <DeckPlayer
+          deckId="B"
+          onLoadFunctionReady={onDeckBLoadFunctionReady}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -30,7 +30,7 @@ export default function SeekBar({ currentTime, duration, onSeek, accentColor = '
   const trackColor = 'rgb(55 65 81)'; // gray-700
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <div className="relative">
         <input
           type="range"
@@ -40,7 +40,7 @@ export default function SeekBar({ currentTime, duration, onSeek, accentColor = '
           value={currentTime}
           onChange={handleSeek}
           disabled={!duration}
-          className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-700 slider disabled:cursor-not-allowed"
+          className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-gray-700 slider disabled:cursor-not-allowed"
           style={{
             background: duration
               ? `linear-gradient(to right,
@@ -53,7 +53,7 @@ export default function SeekBar({ currentTime, duration, onSeek, accentColor = '
         />
       </div>
 
-      <div className="flex justify-between text-xs text-gray-500 font-mono">
+      <div className="flex justify-between text-[10px] text-gray-500 font-mono">
         <span>{formatTime(currentTime)}</span>
         <span>{formatTime(duration)}</span>
       </div>
@@ -61,22 +61,22 @@ export default function SeekBar({ currentTime, duration, onSeek, accentColor = '
       <style>{`
         .slider::-webkit-slider-thumb {
           appearance: none;
-          width: 16px;
-          height: 16px;
+          width: 12px;
+          height: 12px;
           border-radius: 50%;
           background: white;
           cursor: pointer;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
 
         .slider::-moz-range-thumb {
-          width: 16px;
-          height: 16px;
+          width: 12px;
+          height: 12px;
           border-radius: 50%;
           background: white;
           cursor: pointer;
           border: none;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
 
         .slider::-webkit-slider-thumb:hover {

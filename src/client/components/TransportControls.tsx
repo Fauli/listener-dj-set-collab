@@ -23,7 +23,7 @@ export default function TransportControls({
   onToggleLoop,
   accentColor = 'primary',
 }: TransportControlsProps) {
-  const buttonClass = `p-3 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+  const buttonClass = `p-2 rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
     accentColor === 'primary'
       ? 'hover:bg-primary-600/20'
       : 'hover:bg-purple-600/20'
@@ -36,7 +36,7 @@ export default function TransportControls({
     : 'text-gray-400';
 
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-1.5">
       {/* Play/Pause */}
       {!isPlaying ? (
         <button
@@ -49,7 +49,7 @@ export default function TransportControls({
           } text-white`}
           title="Play"
         >
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
           </svg>
         </button>
@@ -64,7 +64,7 @@ export default function TransportControls({
           } text-white`}
           title="Pause"
         >
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path d="M5 4a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V4zM13 4a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2h-2a2 2 0 01-2-2V4z" />
           </svg>
         </button>
@@ -77,7 +77,7 @@ export default function TransportControls({
         className={`${buttonClass} text-gray-400`}
         title="Stop"
       >
-        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
         </svg>
       </button>
@@ -89,7 +89,7 @@ export default function TransportControls({
         className={`${buttonClass} ${activeClass}`}
         title={loop ? 'Loop: ON' : 'Loop: OFF'}
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
