@@ -180,7 +180,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
         {/* Content */}
         <div className="flex-1 flex flex-col">
           {/* Track Info */}
-          <TrackInfo track={deck.track} isPlaying={deck.isPlaying} />
+          <TrackInfo track={deck.track} isPlaying={deck.isPlaying} rate={deck.rate} accentColor={accentColor} />
 
           {/* Waveform - Compact */}
           <div className="px-2 py-1">

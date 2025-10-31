@@ -7,9 +7,11 @@ import type { PlaylistTrack } from '../stores/playlistStore';
 interface TrackInfoProps {
   track: PlaylistTrack | null;
   isPlaying: boolean;
+  rate?: number;
+  accentColor?: string;
 }
 
-export default function TrackInfo({ track, isPlaying }: TrackInfoProps) {
+export default function TrackInfo({ track, isPlaying, rate = 1.0, accentColor = 'primary' }: TrackInfoProps) {
   if (!track) {
     return (
       <div className="px-2 py-1.5 border-b border-gray-700">
@@ -39,7 +41,22 @@ export default function TrackInfo({ track, isPlaying }: TrackInfoProps) {
         {/* Metadata */}
         <div className="flex items-center gap-2 text-gray-500 flex-shrink-0">
           {track.track.bpm && (
-            <span className="whitespace-nowrap">{track.track.bpm} BPM</span>
+            <span className="whitespace-nowrap">
+              {rate !== 1.0 ? (
+                <>
+                  <span className="text-gray-600">{track.track.bpm} →</span>{' '}
+                  <span
+                    className="font-bold"
+                    style={{ color: accentColor === 'primary' ? '#3b82f6' : '#a855f7' }}
+                  >
+                    {(track.track.bpm * rate).toFixed(2)}
+                  </span>{' '}
+                  BPM
+                </>
+              ) : (
+                `${track.track.bpm} BPM`
+              )}
+            </span>
           )}
           {track.track.key && (
             <span className="whitespace-nowrap">| {track.track.key}</span>
