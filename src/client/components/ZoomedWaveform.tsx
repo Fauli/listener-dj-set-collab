@@ -134,21 +134,25 @@ export default function ZoomedWaveform({
     const halfWindow = zoomWindowSeconds / 2;
     const startTime = Math.max(0, currentTime - halfWindow);
     const endTime = Math.min(duration, currentTime + halfWindow);
-    const visibleDuration = endTime - startTime;
 
     // Calculate which peaks to show
     const startPeakIndex = Math.floor(startTime * peaksPerSecond);
     const endPeakIndex = Math.floor(endTime * peaksPerSecond);
     const visiblePeaks = audioPeaks.slice(startPeakIndex, endPeakIndex);
 
-    // Draw waveform bars
+    // Draw waveform bars - ALWAYS use full zoomWindowSeconds for consistent scale
     const barWidth = 3;
     const barGap = 1;
     const barTotalWidth = barWidth + barGap;
-    const pixelsPerSecond = width / visibleDuration;
+    const pixelsPerSecond = width / zoomWindowSeconds; // Use full window, not actual visible duration
+
+    // Calculate offset for edge cases (start/end of track)
+    const idealStartTime = currentTime - halfWindow;
+    const offsetTime = startTime - idealStartTime; // How much we're offset from ideal center
+    const offsetPixels = offsetTime * pixelsPerSecond;
 
     visiblePeaks.forEach((peak, i) => {
-      const x = (i / peaksPerSecond) * pixelsPerSecond;
+      const x = offsetPixels + (i / peaksPerSecond) * pixelsPerSecond;
       const barHeight = peak * (height * 0.8); // Use 80% of height
       const y = (height - barHeight) / 2;
 
@@ -159,8 +163,9 @@ export default function ZoomedWaveform({
   }, [currentTime, duration, audioPeaks, peaksPerSecond, zoomWindowSeconds, waveColor]);
 
   // Calculate beat markers
-  const visibleWindowStart = Math.max(0, currentTime - zoomWindowSeconds / 2);
-  const visibleWindowEnd = Math.min(duration, currentTime + zoomWindowSeconds / 2);
+  const halfWindow = zoomWindowSeconds / 2;
+  const visibleWindowStart = Math.max(0, currentTime - halfWindow);
+  const visibleWindowEnd = Math.min(duration, currentTime + halfWindow);
 
   const beatMarkers =
     firstBeatTime !== null && bpm !== null && duration > 0
@@ -170,10 +175,15 @@ export default function ZoomedWaveform({
   const containerWidth = canvasRef.current?.offsetWidth || 0;
   const pixelsPerSecond = containerWidth / zoomWindowSeconds;
 
-  // Position beat markers relative to current time
+  // Calculate offset for edge cases (same as waveform)
+  const idealStartTime = currentTime - halfWindow;
+  const offsetTime = visibleWindowStart - idealStartTime;
+  const offsetPixels = offsetTime * pixelsPerSecond;
+
+  // Position beat markers with offset applied
   const visibleBeatMarkers = beatMarkers.map((beatTime) => {
     const offsetFromStart = beatTime - visibleWindowStart;
-    const viewportPosition = offsetFromStart * pixelsPerSecond;
+    const viewportPosition = offsetPixels + offsetFromStart * pixelsPerSecond;
 
     const beatNumber = Math.round((beatTime - firstBeatTime!) / (60 / (bpm! * rate))) + 1;
     return {
