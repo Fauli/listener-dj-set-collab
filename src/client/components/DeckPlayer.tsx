@@ -29,6 +29,9 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
   const setFirstBeatTime = useDeckStore((state) => state.setFirstBeatTime);
   const setCuePoint = useDeckStore((state) => state.setCuePoint);
 
+  // Get the other deck's state for sync functionality
+  const otherDeck = useDeckStore((state) => (deckId === 'A' ? state.deckB : state.deckA));
+
   const accentColor = deckId === 'A' ? 'primary' : 'purple';
   const borderColor = deckId === 'A' ? 'border-primary-600/30' : 'border-purple-600/30';
   const bgColor = deckId === 'A' ? 'bg-primary-900/10' : 'bg-purple-900/10';
@@ -112,6 +115,33 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
       }
     }
   };
+
+  const handleSync = () => {
+    // Sync this deck's BPM to match the other deck
+    if (!deck.track?.track.bpm || !otherDeck.track?.track.bpm) return;
+
+    const currentBpm = deck.track.track.bpm * deck.rate;
+    const targetBpm = otherDeck.track.track.bpm * otherDeck.rate;
+
+    // Calculate required rate to match target BPM
+    const requiredRate = targetBpm / deck.track.track.bpm;
+
+    // Clamp to valid range (0.92 - 1.08)
+    const clampedRate = Math.max(0.92, Math.min(1.08, requiredRate));
+
+    changeRate(clampedRate);
+  };
+
+  // Check if decks are in sync (within 0.1 BPM)
+  const isInSync =
+    deck.track?.track.bpm &&
+    otherDeck.track?.track.bpm &&
+    Math.abs(
+      deck.track.track.bpm * deck.rate - otherDeck.track.track.bpm * otherDeck.rate
+    ) < 0.1;
+
+  // Can sync if both decks have tracks with BPM and not already in sync
+  const canSync = deck.track?.track.bpm && otherDeck.track?.track.bpm && !isInSync;
 
   const audioUrl = deck.track ? `http://localhost:3000/api/upload/${deck.track.track.id}/audio` : null;
 
@@ -248,10 +278,9 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
             />
           </div>
 
-          {/* Controls - Ultra Compact Horizontal Layout */}
+          {/* Controls - Single Row Compact */}
           <div className={`px-2 py-1.5 border-t ${borderColor}`}>
-            {/* Transport + Knobs Row */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {/* Transport Controls */}
               <div className="flex-shrink-0">
                 <TransportControls
@@ -266,8 +295,8 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                 />
               </div>
 
-              {/* Knobs - Horizontal Row */}
-              <div className="flex items-start gap-2 flex-1">
+              {/* Knobs - Compact */}
+              <div className="flex items-start gap-1.5">
                 <Knob
                   label="Vol"
                   value={deck.volume}
@@ -329,8 +358,45 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                 />
               </div>
 
-              {/* Beat Grid - Ultra Compact */}
-              <div className="flex-shrink-0" style={{ width: '100px' }}>
+              {/* Sync Button - Icon Only */}
+              <button
+                onClick={handleSync}
+                disabled={!canSync}
+                className={`p-1.5 rounded text-xs font-medium transition-all flex items-center justify-center flex-shrink-0 ${
+                  isInSync
+                    ? 'bg-green-600 text-white'
+                    : canSync
+                    ? accentColor === 'primary'
+                      ? 'bg-primary-600 hover:bg-primary-700 text-white'
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                }`}
+                title={
+                  !deck.track?.track.bpm || !otherDeck.track?.track.bpm
+                    ? 'Both decks need tracks with BPM'
+                    : isInSync
+                    ? 'Decks are in sync'
+                    : 'Sync BPM to other deck'
+                }
+              >
+                {isInSync ? (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                )}
+              </button>
+
+              {/* Beat Grid - Compact */}
+              <div className="flex-shrink-0">
                 <BeatGridControl
                   currentTime={deck.currentTime}
                   firstBeatTime={deck.firstBeatTime}
