@@ -174,7 +174,7 @@ This file tracks the implementation progress for the Listener MVP.
   - [x] Return track ID and extracted metadata to client
   - [x] Room validation and error handling
 - [x] Create file storage structure
-  - [x] Create `uploads/` directory with `.gitignore` entry (uploads/* pattern)
+  - [x] Create `uploads/` directory with `.gitignore` entry (uploads/\* pattern)
   - [x] Implement filename sanitization (UUID-based naming)
   - [x] Add `uploads/keep` file to preserve directory structure in Git
   - [ ] Add file cleanup on track deletion (deferred - optional for MVP)
@@ -304,6 +304,250 @@ This file tracks the implementation progress for the Listener MVP.
 
 ---
 
+### Milestone 1.7: DJ Player & Audio Deck Features ✅ COMPLETE
+
+**Goal:** Build dual-deck audio player with waveform visualization, beat grids, and DJ controls.
+
+#### Audio Player Core
+
+- [x] Create DeckPlayer component with dual deck support (Deck A & B)
+- [x] Implement useAudioPlayer hook for audio playback management
+- [x] Create deckStore for managing deck state (Zustand)
+- [x] Track loading from playlist to deck
+- [x] Basic transport controls (play, pause, stop)
+- [x] Volume control with knobs
+- [x] Loop functionality
+- [x] Seek/scrub support
+
+#### Waveform Visualization
+
+- [x] Integrate WaveSurfer.js for waveform rendering
+- [x] Create Waveform component (full overview)
+- [x] Create ZoomedWaveform component (close-up view, 20s window)
+- [x] Current playback position indicator
+- [x] Click-to-seek on waveform
+- [x] Color-coded by deck (blue for A, purple for B)
+
+#### Beat Grid & Tempo Control
+
+- [x] BeatGridControl component
+- [x] Manual beat grid setting (click to set first beat)
+- [x] Beat markers overlay on waveform
+- [x] Tempo/rate control knob (±8%, 0.92-1.08)
+- [x] Beat quantization for cue points
+- [ ] Auto-detect beat grid (using beat detection algorithm)
+- [x] Beat grid adapts to tempo changes in calculations
+- [ ] **BUG: Waveform beat markers don't update when tempo changes** (See Known Bugs #2)
+
+#### Cue Points System
+
+- [x] CuePoints component with 4 cue buttons (Start, End, A, B)
+- [x] Set cue point at current position (click when empty)
+- [x] Jump to cue point (click when set)
+- [x] Delete cue point (Shift+Click or Right-Click)
+- [x] Cue points stored in database (SetEntry.cuePoints JSON field)
+- [x] Cue points sync across DJs in same room
+- [x] Visual indicators for set vs unset cues
+- [x] Beat-snapped cue points (when beat grid is set)
+- [x] Cue markers on waveform visualization
+- [ ] **BUG: Cue points not loading after room reload** (See Known Bugs #7 - Fixed, needs testing)
+
+#### EQ & Mixing
+
+- [x] 3-band EQ (Low, Mid, High) with ±12dB range
+- [x] Knob controls for each EQ band
+- [x] Color-coded knobs (Red=Low, Yellow=Mid, Blue=High)
+- [x] Crossfader state management
+- [x] Crossfader volume calculation
+- [ ] Crossfader UI component (deferred)
+
+#### Track Selection
+
+- [x] TrackSelectorModal component
+- [x] Load track from playlist to deck
+- [x] Unload track from deck
+- [x] Load button in deck header
+- [x] Modal shows full playlist for selection
+
+#### UI/UX
+
+- [x] Compact deck layout with header
+- [x] Color-coded decks (Primary/Blue for A, Purple for B)
+- [x] Loading states with spinners
+- [x] Error display for failed loads
+- [x] Time display (current / duration)
+- [x] Knob components with value display
+- [x] Responsive grid layout for controls
+
+**Definition of Done:** ✅ DJs can load tracks into two decks, see waveforms, set beat grids and cue points, adjust tempo/EQ, and mix between tracks.
+
+**Test Status:** Manual testing only - no automated tests yet for player features
+**Code Quality:** TypeScript compiling, no errors
+**Actual Effort:** ~3-4 days (completed 2025-10-31)
+
+**Known Issues:**
+
+- See "Known Bugs" section below for critical issues
+
+---
+
+## 🐛 Known Bugs (CRITICAL - Must Fix Before Phase 2)
+
+### Priority 1: Data Integrity Issues (MUST FIX IMMEDIATELY)
+
+**BUG #5: Tracks appear in random order when adding multiple tracks**
+
+- **Severity:** CRITICAL (affects data integrity)
+- **Impact:** Users see different track orders after reloading
+- **Steps to Reproduce:**
+  1. Add multiple tracks to playlist quickly
+  2. Observe order
+  3. Reload room
+  4. Order is different
+- **Root Cause:** Likely race condition in position management or incorrect ordering query
+- **Location:** `src/server/models/SetEntry.ts` (addTrackToPlaylist) or `src/client/stores/playlistStore.ts`
+- **Priority:** P0 - Fix before any other work
+
+**BUG #1: Reordering fails with unique constraint error**
+
+- **Severity:** HIGH (breaks core feature intermittently)
+- **Impact:** Users cannot reliably reorder tracks
+- **Error Message:**
+  ```
+  Failed to reorder track
+  Unique constraint failed on the fields: (`roomId`,`position`)
+  ```
+- **Steps to Reproduce:**
+  1. Add 3+ tracks to playlist
+  2. Drag track to reorder multiple times quickly
+  3. Error appears inconsistently
+- **Root Cause:** Race condition in updatePosition transaction - temporary position -1 may conflict
+- **Location:** `src/server/models/SetEntry.ts:224` (updatePosition function)
+- **Priority:** P0 - Fix after Bug #5
+
+### Priority 2: Core DJ Functionality Issues
+
+**BUG #2: Zoomed Waveform beat grid doesn't adapt to tempo changes**
+
+- **Severity:** HIGH (marked as "drastic" by user)
+- **Impact:** Beat markers misaligned when tempo changes, breaks DJ workflow
+- **Steps to Reproduce:**
+  1. Load track with beat grid set
+  2. Change tempo knob
+  3. Beat grid calculations update but waveform markers don't move
+- **Root Cause:** Beat grid overlay not recalculating positions when rate changes
+- **Location:** `src/client/components/Waveform.tsx` and `src/client/components/ZoomedWaveform.tsx`
+- **Priority:** P1 - Critical for DJ functionality
+
+**BUG #6: Deleting track doesn't update playlist until reload**
+
+- **Severity:** MEDIUM-HIGH
+- **Impact:** Real-time sync broken, confusing UX
+- **Steps to Reproduce:**
+  1. Have 2+ clients in same room
+  2. Delete track in one client
+  3. Track remains visible in other clients until page reload
+- **Root Cause:** WebSocket event not broadcasting or client not handling playlist:track-removed
+- **Location:** `src/server/sockets/playlistHandlers.ts` or `src/client/stores/playlistStore.ts`
+- **Priority:** P1
+
+### Priority 3: State Management & UX Issues
+
+**BUG #4: Old tracks remain in decks when switching rooms**
+
+- **Severity:** MEDIUM
+- **Impact:** Confusing UX, old audio may play in new room
+- **Steps to Reproduce:**
+  1. Load tracks in Deck A & B in Room 1
+  2. Navigate to Room 2
+  3. Old tracks still loaded in decks
+- **Root Cause:** Deck store not cleared on room change
+- **Location:** `src/client/stores/deckStore.ts` - needs cleanup on room unmount
+- **Priority:** P2
+
+**BUG #3: Room creation shows backend URL instead of frontend URL**
+
+- **Severity:** LOW
+- **Impact:** Copy-paste URL doesn't work, user confusion
+- **Steps to Reproduce:**
+  1. Create new room
+  2. Check "Room Created" success message
+  3. URL shows `http://localhost:3000/rooms/...` instead of `http://localhost:5173/rooms/...`
+- **Root Cause:** Frontend constructing URL incorrectly
+- **Location:** `src/client/components/RoomCreate.tsx`
+- **Priority:** P3 - Easy fix, low impact
+
+**BUG #7: Cue points not loading after room reload (TESTING)**
+
+- **Severity:** MEDIUM
+- **Impact:** Cue points don't persist across sessions
+- **Status:** Fix implemented, needs user testing
+- **Fix Applied:** Added 404 error handling in DeckPlayer.tsx:82-85
+- **Location:** `src/client/components/DeckPlayer.tsx` (handleSetCue, handleDeleteCue)
+- **Priority:** P2 - Verify fix works
+
+---
+
+## 💡 Improvement Backlog
+
+### High Priority Enhancements
+
+**IMP #1: Auto-detect beat grid on track load**
+
+- Use audio analysis library (Essentia.js or similar) to detect first beat
+- Run automatically when track is loaded to deck
+- Show confidence indicator
+- Allow manual override
+- **Effort:** Medium (1-2 days)
+- **Value:** High - saves DJ time
+
+**IMP #4: Show exact BPM with 2 decimal precision**
+
+- Current tempo knob shows BPM but not exact adjusted BPM
+- Add display: "Current BPM: 128.47" (original BPM × rate)
+- Update in real-time as tempo knob changes
+- **Effort:** Small (1-2 hours)
+- **Value:** High - essential for beatmatching
+
+**IMP #5: Add BPM sync button between decks**
+
+- Calculate rate adjustment needed to match other deck's BPM
+- One-click sync: "Sync to Deck A" or "Sync to Deck B"
+- Visual indicator when decks are in sync (within 0.1 BPM)
+- **Effort:** Medium (half day)
+- **Value:** High - core DJ feature
+
+### Medium Priority Enhancements
+
+**IMP #2: Clear cue points functionality**
+
+- ✅ Already implemented! (Shift+Click or Right-Click to delete)
+- User may not have discovered this feature
+- Consider adding visual hint/tooltip
+- **Status:** DONE - Document in UI
+
+**IMP #3: Vertical alignment of grid box controls**
+
+- Current controls use too much vertical space
+- Rearrange BeatGridControl component to align horizontally
+- Save screen real estate for waveforms
+- **Effort:** Small (1-2 hours)
+- **Value:** Medium - better space usage
+
+**IMP #6: Improve test coverage**
+
+- Current: 48/55 tests passing (87%)
+- No tests for DJ player features
+- Need tests for:
+  - Audio playback logic
+  - Beat grid calculations
+  - Cue point persistence
+  - Tempo/EQ controls
+- **Effort:** Large (2-3 days)
+- **Value:** High - prevent regressions
+
+---
+
 ## 📤 Phase 2: Export & Polish
 
 ### Milestone 2.1: CSV Export
@@ -400,10 +644,17 @@ This file tracks the implementation progress for the Listener MVP.
 
 ## 📊 Progress Tracker
 
-**Current Phase:** Phase 1.5 - File Upload & Metadata Extraction ✅ COMPLETE → Moving to Phase 1.6
-**Last Updated:** 2025-10-29 13:25 UTC
-**Completed Milestones:** 6 / 11
-**Test Status:** 48/55 tests passing (87% pass rate) - 8 new upload tests added | Linting: ✅ Clean | TypeScript: ✅ No errors
+**Current Phase:** 🐛 BUG FIX SPRINT - Critical bugs must be resolved before Phase 2
+**Last Updated:** 2025-10-31 18:30 UTC
+**Completed Milestones:** 7 / 12 (Phase 1 Complete!)
+**Test Status:** 48/55 tests passing (87% pass rate) | Linting: ✅ Clean | TypeScript: ✅ No errors
+
+**Critical Blockers:**
+
+- 🔴 **BUG #5** - Tracks appear in random order (P0 - CRITICAL)
+- 🔴 **BUG #1** - Reordering unique constraint error (P0 - HIGH)
+- 🟡 **BUG #2** - Beat grid waveform not updating with tempo (P1 - HIGH)
+- 🟡 **BUG #6** - Delete not syncing in real-time (P1 - MEDIUM-HIGH)
 
 ### Phase Checklist
 
@@ -413,7 +664,9 @@ This file tracks the implementation progress for the Listener MVP.
 - [x] Phase 1.3: Track Management ✅ COMPLETE
 - [x] Phase 1.4: Real-Time Playlist Sync ✅ COMPLETE
 - [x] Phase 1.5: File Upload & Metadata Extraction ✅ COMPLETE
-- [ ] Phase 1.6: Drag & Drop Reordering
+- [x] Phase 1.6: Drag & Drop Reordering ✅ COMPLETE
+- [x] Phase 1.7: DJ Player & Audio Deck Features ✅ COMPLETE (with known bugs)
+- [ ] **🐛 Bug Fix Sprint** - CURRENT FOCUS
 - [ ] Phase 2.1: CSV Export
 - [ ] Phase 2.2: UI/UX Polish
 - [ ] Phase 2.3: Simple Authentication
@@ -424,72 +677,205 @@ This file tracks the implementation progress for the Listener MVP.
 
 ## 🎯 Next Action
 
-**Current Focus:** Phase 1.6 - Drag & Drop Reordering (Ready to start)
+**Current Focus:** 🐛 BUG FIX SPRINT - Resolve critical bugs before Phase 2
 
 **System Status:**
 
 - ✅ Backend: http://localhost:3000 (PostgreSQL 17)
 - ✅ Frontend: http://localhost:5173
 - ✅ Database: PostgreSQL (seeded with 2 DJs, rooms, 2 tracks)
-- ✅ Phase 0 complete!
-- ✅ Phase 1.1 complete - Room Creation with API!
-- ✅ Phase 1.2 complete - WebSocket room joining!
-- ✅ Phase 1.3 complete - Track Management (CRUD)!
-- ✅ Phase 1.4 complete - Real-Time Playlist Sync!
-- ✅ Phase 1.5 complete - File Upload & Metadata Extraction!
-- ✅ Phase 1.6 complete - Drag & Drop Reordering!
-- 🎉 **PHASE 1 COMPLETE!** All core functionality working!
+- 🎉 **PHASE 1 COMPLETE!** All features implemented
+- ⚠️ **CRITICAL BUGS** - Must fix before Phase 2
 
-**What Was Built (Phase 1.5):**
+---
 
-- ✅ File upload with multer (100MB limit, audio formats only)
-- ✅ Metadata extraction with music-metadata (ID3 tags + filename fallback)
-- ✅ Upload endpoint (POST /api/upload) with room validation
-- ✅ File serving endpoint (GET /api/upload/:trackId/audio)
-- ✅ FileUpload component with drag-and-drop and progress tracking
-- ✅ Updated AddTrackForm with tabs (Upload vs Manual Entry)
-- ✅ Compact TrackList UI (50% less vertical space)
-- ✅ Fixed React closure bug for immediate track display
-- ✅ Git configuration (uploads/* ignored, uploads/keep tracked)
+### 🚨 IMMEDIATE ACTIONS REQUIRED (in priority order)
 
-**How to Test File Upload:**
+#### 1. FIX BUG #5: Random Track Order (P0 - CRITICAL) 🔴
 
-1. Open http://localhost:5173 and create/join a room
-2. Click "Add Track to Playlist" → "Upload File" tab
-3. Drag-and-drop an audio file (MP3, WAV, FLAC, etc.)
-4. Watch progress bar and metadata extraction
-5. Track appears in playlist automatically
-6. Open in second browser window → see real-time sync
+**Problem:** Tracks appear in different order after reloading room
 
-**Files Created/Modified (Phase 1.5):**
+**Investigation Steps:**
 
-- Backend: `utils/metadataExtractor.ts` (NEW), `routes/uploads.ts` (NEW), `index.ts` (added upload routes)
-- Frontend: `components/FileUpload.tsx` (NEW), `components/AddTrackForm.tsx` (tabs), `components/TrackList.tsx` (compact UI)
-- Config: `.gitignore` (uploads/* pattern), `uploads/keep` (NEW)
-- Tests: 40/47 passing (integration tests pending)
+1. Check `getPlaylistByRoom()` query - verify `orderBy: { position: 'asc' }` is applied
+2. Review `addTrackToPlaylist()` - check if position conflicts cause wrong ordering
+3. Add logging to track position assignments during multiple rapid uploads
+4. Check WebSocket event ordering - verify `playlist:track-added` events maintain order
 
-**What Was Built (Phase 1.6):**
+**Files to Check:**
 
-- ✅ Backend reorder logic with `updatePosition()` (transaction-safe)
-- ✅ WebSocket `playlist:reorder` handler with full playlist broadcast
-- ✅ @dnd-kit integration for modern drag & drop
-- ✅ Drag handle UI with visual feedback (opacity change while dragging)
-- ✅ Optimistic UI updates for instant feedback
-- ✅ Real-time sync across all connected clients
+- `src/server/models/SetEntry.ts` (lines 100-114: getPlaylistByRoom, lines 33-95: addTrackToPlaylist)
+- `src/client/stores/playlistStore.ts` (WebSocket event handlers)
+- `src/server/sockets/playlistHandlers.ts` (track-added event broadcasting)
 
-**How to Test Drag & Drop:**
+**Expected Fix:** Ensure consistent ordering query and handle position conflicts correctly
 
-1. Open http://localhost:5173 and create/join a room
-2. Add 3+ tracks to the playlist
-3. Drag tracks by the drag handle (≡ icon) to reorder
-4. Watch positions update immediately
-5. Open in second browser window → see changes sync in real-time
-6. Try keyboard navigation (Tab to handle, Space to grab, Arrow keys to move)
+**Test Plan:**
 
-**🎉 Phase 1 COMPLETE! All core functionality implemented.**
+1. Upload 5 tracks rapidly via drag-and-drop
+2. Note positions in UI
+3. Reload page
+4. Verify positions match original order
+5. Test in 2 browser windows simultaneously
 
-**Ready to Build Next:**
-Phase 2.1: CSV Export OR Phase 2.2: UI/UX Polish
+---
+
+#### 2. FIX BUG #1: Reordering Unique Constraint Error (P0 - HIGH) 🔴
+
+**Problem:** Drag & drop reordering fails with unique constraint error
+
+**Root Cause:** Transaction in `updatePosition()` uses temporary position `-1`, which can conflict if multiple entries exist or concurrent reorders happen
+
+**Proposed Solution:**
+
+- Use a unique temporary position: `-(Date.now() + Math.random())` instead of `-1`
+- Or use a transaction isolation level that prevents conflicts
+- Or restructure to swap positions directly without temp position
+
+**Files to Check:**
+
+- `src/server/models/SetEntry.ts:193-264` (updatePosition function, line 218 sets position: -1)
+
+**Test Plan:**
+
+1. Add 5+ tracks to playlist
+2. Rapidly drag tracks to different positions multiple times
+3. Verify no errors in console
+4. Test with 2 users reordering simultaneously
+
+---
+
+#### 3. FIX BUG #2: Beat Grid Waveform Not Updating with Tempo (P1 - HIGH) 🟡
+
+**Problem:** When tempo changes, beat calculations update but waveform beat markers stay in old positions
+
+**Root Cause:** Waveform component not re-rendering beat markers when `rate` prop changes
+
+**Proposed Solution:**
+
+- Add `rate` to useEffect dependencies in Waveform.tsx and ZoomedWaveform.tsx
+- Recalculate beat marker positions when rate changes
+- Clear and redraw beat grid overlay
+
+**Files to Check:**
+
+- `src/client/components/Waveform.tsx` (beat grid rendering logic)
+- `src/client/components/ZoomedWaveform.tsx` (beat grid rendering logic)
+- Look for `useEffect` hooks that draw beat markers
+
+**Test Plan:**
+
+1. Load track and set beat grid
+2. Verify beat markers align with audio
+3. Change tempo from 1.0 to 1.05
+4. Verify beat markers shift to remain aligned
+5. Test at extreme values (0.92 and 1.08)
+
+---
+
+#### 4. FIX BUG #6: Delete Not Syncing in Real-Time (P1 - MEDIUM-HIGH) 🟡
+
+**Problem:** Deleting a track in one client doesn't update other clients until page reload
+
+**Investigation Steps:**
+
+1. Check if `playlist:track-removed` event is being emitted in backend
+2. Verify WebSocket event is being received in frontend
+3. Check if `playlistStore` is handling the event correctly
+4. Verify `removeTrack` action in store is being called
+
+**Files to Check:**
+
+- `src/server/sockets/playlistHandlers.ts` (check for track removal broadcasting)
+- `src/client/stores/playlistStore.ts` (check event listener for track-removed)
+- `src/client/components/TrackList.tsx` (delete button implementation)
+
+**Test Plan:**
+
+1. Open 2 browser windows in same room
+2. Add 3 tracks to playlist
+3. Delete middle track in window 1
+4. Verify track disappears immediately in window 2
+5. Verify positions renumber correctly
+
+---
+
+### 🎯 After Bug Fixes: Quick Wins (High Value, Low Effort)
+
+Once critical bugs are resolved, tackle these improvements:
+
+1. **IMP #4: Exact BPM Display** (1-2 hours)
+   - Show "Current BPM: 128.47" below tempo knob
+   - Formula: `originalBPM × rate`
+   - Update in real-time
+
+2. **IMP #3: Vertical Grid Box Alignment** (1-2 hours)
+   - Rearrange BeatGridControl to use less vertical space
+   - Free up screen real estate for waveforms
+
+3. **BUG #3: Fix Room URL Display** (30 minutes)
+   - Change `http://localhost:3000` to `http://localhost:5173` in RoomCreate.tsx
+   - Or use `window.location.origin` dynamically
+
+4. **BUG #4: Clear Deck on Room Change** (1 hour)
+   - Add cleanup in RoomPage component's `useEffect` unmount
+   - Call `deckStore.reset('A')` and `deckStore.reset('B')`
+
+---
+
+### 📋 What Was Built in Phase 1.7 (DJ Player Features)
+
+**Audio Playback:**
+
+- Dual-deck player (Deck A & B) with independent controls
+- WaveSurfer.js integration for waveform visualization
+- Transport controls: play, pause, stop, seek
+- Volume, loop, tempo (±8%), 3-band EQ controls
+- Knob components for all parameters
+
+**Beat Grid & Cue Points:**
+
+- Manual beat grid setting with visual markers on waveform
+- 4 cue points per track (Start, End, A, B)
+- Beat-snapped cue points when grid is active
+- Cue point persistence in database (JSON field)
+- Delete cue points via Shift+Click or Right-Click
+
+**Waveform Visualization:**
+
+- Full overview waveform (entire track)
+- Zoomed waveform (20-second window around playhead)
+- Beat markers overlay
+- Cue point markers
+- Click-to-seek on waveform
+- Color-coded by deck (blue/purple)
+
+**Track Selection:**
+
+- Modal to load tracks from playlist to deck
+- Load/unload buttons
+- Track metadata display (title, artist, BPM, key)
+
+**Files Created:**
+
+- `src/client/components/DeckPlayer.tsx` (main deck component)
+- `src/client/components/Waveform.tsx` (full waveform view)
+- `src/client/components/ZoomedWaveform.tsx` (zoomed waveform)
+- `src/client/components/BeatGridControl.tsx` (beat grid UI)
+- `src/client/components/CuePoints.tsx` (cue point buttons)
+- `src/client/components/Knob.tsx` (rotary knob control)
+- `src/client/components/TransportControls.tsx` (play/pause/stop)
+- `src/client/hooks/useAudioPlayer.ts` (audio playback logic)
+- `src/client/stores/deckStore.ts` (deck state management)
+- `src/client/utils/beatGrid.ts` (beat calculation utilities)
+
+---
+
+### 🚀 Ready to Resume Phase 2 After Bugs Are Fixed:
+
+- Phase 2.1: CSV Export
+- Phase 2.2: UI/UX Polish (toast notifications, empty states, responsive design)
+- Phase 2.3: Simple Authentication
 
 ---
 
@@ -500,3 +886,60 @@ Phase 2.1: CSV Export OR Phase 2.2: UI/UX Polish
 - Run tests before marking a milestone complete
 - Refer to `docs/PLAN.md` for detailed feature specs
 - Check `CLAUDE.md` for development principles
+
+---
+
+## 📌 Summary & Recommendations
+
+### What's Been Accomplished
+
+**Phase 1 is COMPLETE!** All core features have been implemented:
+
+- ✅ Room creation and joining with WebSocket real-time sync
+- ✅ Track management (CRUD) with file upload and metadata extraction
+- ✅ Real-time playlist sync across multiple DJs
+- ✅ Drag & drop reordering
+- ✅ **BONUS:** Full dual-deck DJ player with waveforms, beat grids, cue points, and EQ
+
+The project has evolved from a simple playlist manager into a **feature-rich DJ application** with professional audio controls.
+
+### Critical Path Forward
+
+**⚠️ STOP BEFORE PHASE 2** - There are critical bugs that affect data integrity and core functionality:
+
+**MUST FIX FIRST (P0):**
+
+1. **BUG #5** - Random track order (data integrity issue)
+2. **BUG #1** - Reordering constraint error (breaks feature)
+
+**SHOULD FIX NEXT (P1):** 3. **BUG #2** - Beat grid waveform not updating (DJ workflow blocker) 4. **BUG #6** - Delete not syncing (real-time sync broken)
+
+**CAN FIX LATER (P2-P3):** 5. **BUG #4** - Old tracks in deck (state management) 6. **BUG #3** - Wrong URL display (cosmetic) 7. **BUG #7** - Cue points loading (fix applied, needs testing)
+
+### Recommended Next Steps
+
+1. **Fix BUG #5 and BUG #1** - These affect core functionality and data integrity
+2. **Fix BUG #2 and BUG #6** - These affect DJ workflow and real-time features
+3. **Quick wins** - Fix bugs #3 and #4 (under 2 hours total)
+4. **Add improvements #4 and #5** - Exact BPM display and sync button (high value for DJs)
+5. **Then proceed to Phase 2** - Polish, authentication, and deployment
+
+### Testing Gaps
+
+- Only 48/55 backend tests passing (87%)
+- **Zero tests** for Phase 1.7 DJ player features
+- No E2E tests for critical user flows
+- Manual testing only for WebSocket sync
+
+**Recommendation:** Add test coverage during bug fix sprint to prevent regressions.
+
+### Acknowledgments
+
+**Feature #2 from improvement requests is ALREADY DONE!**
+
+- Delete cue points with Shift+Click or Right-Click
+- May need better UI hints/tooltips to make this discoverable
+
+---
+
+_Last updated: 2025-10-31 by Claude Code - Bug tracking and prioritization added_

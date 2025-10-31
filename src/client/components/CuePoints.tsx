@@ -10,6 +10,7 @@ interface CuePointsProps {
   currentTime: number;
   onSetCue: (cueType: keyof CuePointsType) => void;
   onJumpToCue: (cueType: keyof CuePointsType) => void;
+  onDeleteCue: (cueType: keyof CuePointsType) => void;
 }
 
 const CUE_CONFIG = {
@@ -54,15 +55,34 @@ export default function CuePoints({
   currentTime,
   onSetCue,
   onJumpToCue,
+  onDeleteCue,
 }: CuePointsProps) {
-  const handleCueClick = (cueType: keyof CuePointsType) => {
+  const handleCueClick = (cueType: keyof CuePointsType, e: React.MouseEvent) => {
     const cueTime = cuePoints[cueType];
+
+    // Shift+Click to delete
+    if (e.shiftKey) {
+      if (cueTime !== null) {
+        onDeleteCue(cueType);
+        e.preventDefault();
+      }
+      return;
+    }
+
     if (cueTime === null) {
       // Not set - set it at current position
       onSetCue(cueType);
     } else {
       // Already set - jump to it
       onJumpToCue(cueType);
+    }
+  };
+
+  const handleContextMenu = (cueType: keyof CuePointsType, e: React.MouseEvent) => {
+    e.preventDefault();
+    const cueTime = cuePoints[cueType];
+    if (cueTime !== null) {
+      onDeleteCue(cueType);
     }
   };
 
@@ -76,7 +96,8 @@ export default function CuePoints({
         return (
           <button
             key={cueType}
-            onClick={() => handleCueClick(cueType)}
+            onClick={(e) => handleCueClick(cueType, e)}
+            onContextMenu={(e) => handleContextMenu(cueType, e)}
             className={`flex flex-col items-center justify-center px-1.5 py-1 rounded text-xs font-medium transition-all ${
               isSet
                 ? `${config.color} ${config.hoverColor} text-white shadow-sm`
@@ -84,7 +105,7 @@ export default function CuePoints({
             }`}
             title={
               isSet
-                ? `Jump to ${config.label} cue (${formatTime(cueTime)})`
+                ? `Jump to ${config.label} cue (${formatTime(cueTime)})\nShift+Click or Right-Click to delete`
                 : `Set ${config.label} cue at current position`
             }
           >

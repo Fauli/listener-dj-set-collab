@@ -105,6 +105,16 @@ export const addToPlaylistSchema = z.object({
 });
 
 /**
+ * Schema for cue points
+ */
+export const cuePointsSchema = z.object({
+  start: z.number().nullable(),
+  end: z.number().nullable(),
+  A: z.number().nullable(),
+  B: z.number().nullable(),
+});
+
+/**
  * Schema for updating set entry
  */
 export const updateSetEntrySchema = z.object({
@@ -118,6 +128,7 @@ export const updateSetEntrySchema = z.object({
     .int('Position must be an integer')
     .min(0, 'Position must be 0 or greater')
     .optional(),
+  cuePoints: cuePointsSchema.optional(),
 });
 
 /**

@@ -51,6 +51,7 @@ model SetEntry {
   trackId   String
   position  Int
   note      String?
+  cuePoints Json?    // Stores cue points: {start, end, A, B} in seconds
   createdAt DateTime @default(now())
 
   room  Room  @relation(fields: [roomId], references: [id], onDelete: Cascade)

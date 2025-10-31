@@ -57,7 +57,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
     setFirstBeatTime(deckId, null);
   };
 
-  const handleSetCue = (cueType: keyof CuePointsType) => {
+  const handleSetCue = async (cueType: keyof CuePointsType) => {
     // Snap to nearest beat if beat grid is set
     let cueTime = deck.currentTime;
     if (deck.firstBeatTime !== null && deck.track?.track.bpm) {
@@ -68,12 +68,49 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
       });
     }
     setCuePoint(deckId, cueType, cueTime);
+
+    // Save to database if track is loaded
+    if (deck.track) {
+      try {
+        const newCuePoints = { ...deck.cuePoints, [cueType]: cueTime };
+        const response = await fetch(`/api/rooms/${deck.track.roomId}/tracks/${deck.track.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cuePoints: newCuePoints }),
+        });
+
+        // Ignore 404 errors (track was removed/reloaded)
+        if (!response.ok && response.status !== 404) {
+          console.warn('Failed to save cue point:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Failed to save cue point:', error);
+      }
+    }
   };
 
   const handleJumpToCue = (cueType: keyof CuePointsType) => {
     const cueTime = deck.cuePoints[cueType];
     if (cueTime !== null) {
       seek(cueTime);
+    }
+  };
+
+  const handleDeleteCue = async (cueType: keyof CuePointsType) => {
+    setCuePoint(deckId, cueType, null);
+
+    // Save to database if track is loaded
+    if (deck.track) {
+      try {
+        const newCuePoints = { ...deck.cuePoints, [cueType]: null };
+        await fetch(`/api/rooms/${deck.track.roomId}/tracks/${deck.track.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cuePoints: newCuePoints }),
+        });
+      } catch (error) {
+        console.error('Failed to delete cue point:', error);
+      }
     }
   };
 
@@ -312,6 +349,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                   currentTime={deck.currentTime}
                   onSetCue={handleSetCue}
                   onJumpToCue={handleJumpToCue}
+                  onDeleteCue={handleDeleteCue}
                 />
               </div>
             </div>

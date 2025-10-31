@@ -12,9 +12,17 @@ export interface AddTrackToPlaylistData {
   note?: string;
 }
 
+export interface CuePoints {
+  start: number | null;
+  end: number | null;
+  A: number | null;
+  B: number | null;
+}
+
 export interface UpdateSetEntryData {
   note?: string;
   position?: number;
+  cuePoints?: CuePoints;
 }
 
 /**

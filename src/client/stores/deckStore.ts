@@ -96,6 +96,18 @@ export const useDeckStore = create<DeckStoreState>((set, get) => ({
         isPlaying: false,
         isPaused: false,
         error: null,
+        // Load cue points from track data if available
+        cuePoints: track.cuePoints ? {
+          start: track.cuePoints.start,
+          end: track.cuePoints.end,
+          A: track.cuePoints.A,
+          B: track.cuePoints.B,
+        } : {
+          start: null,
+          end: null,
+          A: null,
+          B: null,
+        },
       },
     })),
 

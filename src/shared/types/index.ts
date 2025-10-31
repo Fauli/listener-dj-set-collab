@@ -25,12 +25,20 @@ export interface Track {
   sourceURI?: string | null;
 }
 
+export interface CuePoints {
+  start: number | null;
+  end: number | null;
+  A: number | null;
+  B: number | null;
+}
+
 export interface SetEntry {
   id: string;
   roomId: string;
   trackId: string;
   position: number;
   note?: string | null;
+  cuePoints?: CuePoints | null;
   createdAt: Date;
 }
 
