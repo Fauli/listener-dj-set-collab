@@ -335,9 +335,9 @@ This file tracks the implementation progress for the Listener MVP.
 - [x] Beat markers overlay on waveform
 - [x] Tempo/rate control knob (±8%, 0.92-1.08)
 - [x] Beat quantization for cue points
-- [ ] Auto-detect beat grid (using beat detection algorithm)
+- [x] Auto-detect beat grid (using beat detection algorithm)
 - [x] Beat grid adapts to tempo changes in calculations
-- [ ] **BUG: Waveform beat markers don't update when tempo changes** (See Known Bugs #2)
+- [x] **BUG: Waveform beat markers don't update when tempo changes** (See Known Bugs #2)
 
 #### Cue Points System
 
@@ -350,7 +350,7 @@ This file tracks the implementation progress for the Listener MVP.
 - [x] Visual indicators for set vs unset cues
 - [x] Beat-snapped cue points (when beat grid is set)
 - [x] Cue markers on waveform visualization
-- [ ] **BUG: Cue points not loading after room reload** (See Known Bugs #7 - Fixed, needs testing)
+- [x] **BUG: Cue points not loading after room reload** (See Known Bugs #7 - Fixed, needs testing)
 
 #### EQ & Mixing
 
@@ -359,7 +359,7 @@ This file tracks the implementation progress for the Listener MVP.
 - [x] Color-coded knobs (Red=Low, Yellow=Mid, Blue=High)
 - [x] Crossfader state management
 - [x] Crossfader volume calculation
-- [ ] Crossfader UI component (deferred)
+- [x] Crossfader UI component (deferred)
 
 #### Track Selection
 
@@ -427,18 +427,6 @@ This file tracks the implementation progress for the Listener MVP.
 
 ### Priority 2: Core DJ Functionality Issues
 
-**BUG #2: Zoomed Waveform beat grid doesn't adapt to tempo changes**
-
-- **Severity:** HIGH (marked as "drastic" by user)
-- **Impact:** Beat markers misaligned when tempo changes, breaks DJ workflow
-- **Steps to Reproduce:**
-  1. Load track with beat grid set
-  2. Change tempo knob
-  3. Beat grid calculations update but waveform markers don't move
-- **Root Cause:** Beat grid overlay not recalculating positions when rate changes
-- **Location:** `src/client/components/Waveform.tsx` and `src/client/components/ZoomedWaveform.tsx`
-- **Priority:** P1 - Critical for DJ functionality
-
 **BUG #6: Deleting track doesn't update playlist until reload**
 
 - **Severity:** MEDIUM-HIGH
@@ -452,18 +440,6 @@ This file tracks the implementation progress for the Listener MVP.
 - **Priority:** P1
 
 ### Priority 3: State Management & UX Issues
-
-**BUG #4: Old tracks remain in decks when switching rooms**
-
-- **Severity:** MEDIUM
-- **Impact:** Confusing UX, old audio may play in new room
-- **Steps to Reproduce:**
-  1. Load tracks in Deck A & B in Room 1
-  2. Navigate to Room 2
-  3. Old tracks still loaded in decks
-- **Root Cause:** Deck store not cleared on room change
-- **Location:** `src/client/stores/deckStore.ts` - needs cleanup on room unmount
-- **Priority:** P2
 
 **BUG #3: Room creation shows backend URL instead of frontend URL**
 
@@ -550,7 +526,7 @@ This file tracks the implementation progress for the Listener MVP.
 
 ## 📤 Phase 2: Export & Polish
 
-### Milestone 2.1: CSV Export
+### Milestone 2.1: CSV Export (least priority for now)
 
 - [ ] Implement export service (`src/server/services/exportService.ts`)
   - [ ] Generate CSV from playlist
@@ -933,12 +909,13 @@ The project has evolved from a simple playlist manager into a **feature-rich DJ 
 
 **Recommendation:** Add test coverage during bug fix sprint to prevent regressions.
 
-### Acknowledgments
+### Additional ideas by product owner
 
-**Feature #2 from improvement requests is ALREADY DONE!**
+When going through the TODO next time, take these into consideration
 
-- Delete cue points with Shift+Click or Right-Click
-- May need better UI hints/tooltips to make this discoverable
+1. When a track is loaded in Deck A, color code the tracks camelot notation in the playlist, in case it's a match (i.e. the same value or +/-1 in number or A/B of the same number)
+2. Sync button that syncs the the track synced to the other track, i.e. the beats match (based on the beatgrids, high prio feature)
+3. calculate the overall set playtime (full and with transitions). Meaning the tracks just as it. But also the based on the start and en cues set in the tracks (this is a feature for later, but keep it in mind - maybe call it calculate true set length or so)
 
 ---
 

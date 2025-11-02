@@ -75,6 +75,7 @@ function SortableTrackItem({
       ref={setNodeRef}
       style={style}
       className="px-6 py-2 hover:bg-gray-750 transition-colors group bg-gray-800"
+      data-track-item
     >
       <div className="flex items-center gap-3">
         {/* Drag Handle */}
