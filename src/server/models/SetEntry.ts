@@ -78,7 +78,7 @@ export async function addTrackToPlaylist(data: AddTrackToPlaylistData) {
         error.code === 'P2002'
       ) {
         // Unique constraint failed - try next position
-        lastError = error as Error;
+        lastError = error as unknown as Error;
         currentPosition++;
         console.log(
           `Position conflict at ${currentPosition - 1}, retrying with position ${currentPosition} (attempt ${attempt + 1}/${MAX_RETRIES})`
@@ -137,7 +137,10 @@ export async function updateSetEntry(entryId: string, data: UpdateSetEntryData) 
     where: {
       id: entryId,
     },
-    data,
+    data: {
+      ...data,
+      cuePoints: data.cuePoints as any,
+    },
     include: {
       track: true,
     },

@@ -36,12 +36,12 @@ beforeEach(async () => {
   await prisma.setEntry.deleteMany({
     where: { roomId: testRoom.id },
   });
-  // Then delete orphaned tracks
+  // Then delete orphaned tracks (ignore errors if tracks are still referenced)
   await prisma.track.deleteMany({
     where: {
       setEntries: { none: {} },
     },
-  });
+  }).catch(() => {});
 });
 
 afterAll(async () => {

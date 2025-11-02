@@ -14,6 +14,7 @@ import {
 } from '../utils/metadataExtractor.js';
 import { createTrack } from '../models/Track.js';
 import { prisma } from '../db/client.js';
+import { transcodeAiffToWav, needsTranscoding } from '../utils/transcoder.js';
 
 const router = express.Router();
 
@@ -157,8 +158,30 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Room not found' });
     }
 
+    // Transcode AIFF files to WAV for browser compatibility
+    let finalFilePath = req.file.path;
+    let finalFilename = req.file.filename;
+
+    if (needsTranscoding(req.file.filename)) {
+      console.log(`Transcoding AIFF file: ${req.file.filename} → WAV`);
+      try {
+        const wavPath = await transcodeAiffToWav(req.file.path);
+        finalFilePath = wavPath;
+        finalFilename = path.basename(wavPath);
+        console.log(`Transcoding complete: ${finalFilename}`);
+      } catch (transcodingError) {
+        console.error('Transcoding failed:', transcodingError);
+        // Clean up original file
+        await fs.unlink(req.file.path);
+        return res.status(500).json({
+          error: 'Failed to process AIFF file',
+          details: transcodingError instanceof Error ? transcodingError.message : 'Unknown error',
+        });
+      }
+    }
+
     // Extract metadata from the audio file
-    const metadata = await extractMetadata(req.file.path, req.file.originalname);
+    const metadata = await extractMetadata(finalFilePath, req.file.originalname);
 
     // Create track record with extracted metadata and file reference
     const track = await createTrack({
@@ -168,11 +191,11 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
       key: metadata.key,
       energy: undefined, // Energy is not auto-detected, user can add manually
       duration: metadata.duration,
-      sourceURI: req.file.filename, // Store the filename for later retrieval
+      sourceURI: finalFilename, // Store the final filename (WAV if transcoded from AIFF)
     });
 
     console.log(
-      `File uploaded: ${req.file.originalname} → ${req.file.filename} (${metadata.extractedFrom} metadata)`
+      `File uploaded: ${req.file.originalname} → ${finalFilename} (${metadata.extractedFrom} metadata)`
     );
 
     // Return track info and extracted metadata
@@ -190,7 +213,15 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
     // Clean up file if it was uploaded
     if (req.file) {
       try {
-        await fs.unlink(req.file.path);
+        // Try to clean up the transcoded file if it exists
+        const transcodedPath = req.file.path.replace(/\.(aiff|aif)$/i, '.wav');
+        try {
+          await fs.access(transcodedPath);
+          await fs.unlink(transcodedPath);
+        } catch {
+          // Transcoded file doesn't exist, clean up original
+          await fs.unlink(req.file.path);
+        }
       } catch (unlinkError) {
         console.error('Error deleting file after failed upload:', unlinkError);
       }

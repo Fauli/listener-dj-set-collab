@@ -109,34 +109,41 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
               // Only create filters once
               if (!lowFilterRef.current) {
                 // Create 3-band EQ filters on Howler's AudioContext
-                lowFilterRef.current = ctx.createBiquadFilter();
-                lowFilterRef.current.type = 'lowshelf';
-                lowFilterRef.current.frequency.value = 100;
-                lowFilterRef.current.gain.value = deck.eqLow;
+                const lowFilter = ctx.createBiquadFilter();
+                lowFilter.type = 'lowshelf';
+                lowFilter.frequency.value = 100;
+                lowFilter.gain.value = deck.eqLow;
 
-                midFilterRef.current = ctx.createBiquadFilter();
-                midFilterRef.current.type = 'peaking';
-                midFilterRef.current.frequency.value = 1000;
-                midFilterRef.current.Q.value = 1;
-                midFilterRef.current.gain.value = deck.eqMid;
+                const midFilter = ctx.createBiquadFilter();
+                midFilter.type = 'peaking';
+                midFilter.frequency.value = 1000;
+                midFilter.Q.value = 1;
+                midFilter.gain.value = deck.eqMid;
 
-                highFilterRef.current = ctx.createBiquadFilter();
-                highFilterRef.current.type = 'highshelf';
-                highFilterRef.current.frequency.value = 10000;
-                highFilterRef.current.gain.value = deck.eqHigh;
+                const highFilter = ctx.createBiquadFilter();
+                highFilter.type = 'highshelf';
+                highFilter.frequency.value = 10000;
+                highFilter.gain.value = deck.eqHigh;
 
                 // Chain: low -> mid -> high -> destination
-                lowFilterRef.current.connect(midFilterRef.current);
-                midFilterRef.current.connect(highFilterRef.current);
-                highFilterRef.current.connect(ctx.destination);
+                lowFilter.connect(midFilter);
+                midFilter.connect(highFilter);
+                highFilter.connect(ctx.destination);
+
+                // Store in refs
+                lowFilterRef.current = lowFilter;
+                midFilterRef.current = midFilter;
+                highFilterRef.current = highFilter;
 
                 console.log(`[Deck ${deckId}] Created EQ filter chain`);
               }
 
               // Connect Howler's audio node to our EQ chain
-              howlNode.disconnect();
-              howlNode.connect(lowFilterRef.current);
-              console.log(`[Deck ${deckId}] ✅ Connected audio to EQ chain`);
+              if (lowFilterRef.current) {
+                howlNode.disconnect();
+                howlNode.connect(lowFilterRef.current);
+                console.log(`[Deck ${deckId}] ✅ Connected audio to EQ chain`);
+              }
             } else {
               console.warn(`[Deck ${deckId}] No audio node found, EQ disabled`);
             }

@@ -1,6 +1,8 @@
 /**
  * Integration tests for cue points persistence
  * Tests the bug we just fixed: cue points not loading after room reload
+ *
+ * NOTE: Requires server to be running (npm run dev:server)
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
@@ -127,7 +129,10 @@ describe('Cue Points Persistence', () => {
         position: 0,
       }),
     });
-    const { setEntry: addedEntry } = await addResponse.json();
+    expect(addResponse.ok).toBe(true);
+    const responseData = await addResponse.json();
+    expect(responseData.setEntry).toBeDefined();
+    const addedEntry = responseData.setEntry;
 
     // Set cue points
     const cuePoints = {
@@ -167,7 +172,10 @@ describe('Cue Points Persistence', () => {
         position: 0,
       }),
     });
-    const { setEntry: addedEntry } = await addResponse.json();
+    expect(addResponse.ok).toBe(true);
+    const responseData = await addResponse.json();
+    expect(responseData.setEntry).toBeDefined();
+    const addedEntry = responseData.setEntry;
 
     // Set initial cue points
     const initialCuePoints = {
@@ -217,7 +225,10 @@ describe('Cue Points Persistence', () => {
         position: 0,
       }),
     });
-    const { setEntry: addedEntry } = await addResponse.json();
+    expect(addResponse.ok).toBe(true);
+    const responseData = await addResponse.json();
+    expect(responseData.setEntry).toBeDefined();
+    const addedEntry = responseData.setEntry;
 
     // Set initial cue points
     const cuePoints = {
@@ -268,7 +279,10 @@ describe('Cue Points Persistence', () => {
         position: 0,
       }),
     });
-    const { setEntry: addedEntry } = await addResponse.json();
+    expect(addResponse.ok).toBe(true);
+    const responseData = await addResponse.json();
+    expect(responseData.setEntry).toBeDefined();
+    const addedEntry = responseData.setEntry;
 
     // Set cue points
     const cuePoints = {
@@ -307,7 +321,10 @@ describe('Cue Points Persistence', () => {
         position: 0,
       }),
     });
-    const { setEntry: addedEntry } = await addResponse.json();
+    expect(addResponse.ok).toBe(true);
+    const responseData = await addResponse.json();
+    expect(responseData.setEntry).toBeDefined();
+    const addedEntry = responseData.setEntry;
 
     // Update both note and cue points
     const cuePoints = {

@@ -79,9 +79,12 @@ afterAll(async () => {
     where: { id: testUser.id },
   }).catch(() => {});
 
-  // Clean up test fixtures
+  // Clean up only the test fixtures we created (not the entire fixtures directory)
   const fixturesDir = path.join(process.cwd(), 'tests', 'fixtures');
-  await fs.rm(fixturesDir, { recursive: true, force: true });
+  await fs.unlink(path.join(fixturesDir, 'test-track.mp3')).catch(() => {});
+  await fs.unlink(path.join(fixturesDir, 'Artist Name - Track Title.mp3')).catch(() => {});
+  await fs.unlink(path.join(fixturesDir, 'invalid.txt')).catch(() => {});
+  await fs.unlink(path.join(fixturesDir, 'large-file.mp3')).catch(() => {});
 
   await prisma.$disconnect();
 });

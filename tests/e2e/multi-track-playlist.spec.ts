@@ -65,9 +65,8 @@ test.describe('Multi-Track Playlist Management', () => {
     // Close the form by clicking the X button
     await page.getByText('Add New Track').locator('..').getByRole('button').click();
 
-    // Wait for first track to appear in playlist
-    await page.waitForTimeout(3000);
-    await expect(page.locator('[data-track-item]').first()).toBeVisible();
+    // Wait for first track to appear in playlist (WebSocket propagation)
+    await expect(page.locator('[data-track-item]').first()).toBeVisible({ timeout: 15000 });
 
     // Upload second track
     await page.getByRole('button', { name: 'Add Track to Playlist' }).click();
@@ -82,9 +81,8 @@ test.describe('Multi-Track Playlist Management', () => {
     // Close the form by clicking the X button
     await page.getByText('Add New Track').locator('..').getByRole('button').click();
 
-    // Wait for second track to appear in playlist
-    await page.waitForTimeout(3000);
-    await expect(page.locator('[data-track-item]').nth(1)).toBeVisible();
+    // Wait for second track to appear in playlist (WebSocket propagation)
+    await expect(page.locator('[data-track-item]').nth(1)).toBeVisible({ timeout: 15000 });
 
     // Upload third track
     await page.getByRole('button', { name: 'Add Track to Playlist' }).click();
@@ -99,9 +97,8 @@ test.describe('Multi-Track Playlist Management', () => {
     // Close the form by clicking the X button
     await page.getByText('Add New Track').locator('..').getByRole('button').click();
 
-    // Wait for third track to appear in playlist
-    await page.waitForTimeout(3000);
-    await expect(page.locator('[data-track-item]').nth(2)).toBeVisible();
+    // Wait for third track to appear in playlist (WebSocket propagation)
+    await expect(page.locator('[data-track-item]').nth(2)).toBeVisible({ timeout: 15000 });
 
     // Get the track order before reload
     const tracksBefore = await page.locator('[data-track-item]').allTextContents();

@@ -124,7 +124,6 @@ socket.on('playlist:track-added', (track) => updateLocalPlaylist(track));
 
 ---
 
-
 ## 🔐 Security & Stability Expectations
 
 - Validate all input (Zod or manual).

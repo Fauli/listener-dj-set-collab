@@ -61,7 +61,7 @@ export default function FileUpload({ roomId, onUploadComplete, onFilesSelected }
         id: generateFileId(),
         progress: 0,
         status: error ? 'error' : 'pending',
-        error,
+        error: error ?? undefined,
       });
     }
 
