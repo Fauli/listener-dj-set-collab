@@ -72,18 +72,11 @@ Focus for MVP:
 
 ---
 
-## 🧩 Architectural Overview
+## 🔗 Technical Reference
 
-| Layer        | Tech                              | Notes                      |
-| ------------ | --------------------------------- | -------------------------- |
-| **Backend**  | Node.js + Express                 | REST + WebSocket endpoints |
-| **Realtime** | Socket.io                         | For live playlist sync     |
-| **Frontend** | React (Vite or Next.js)           | Realtime UI + drag & drop  |
-| **Database** | PostgreSQL (preferred) or MongoDB | Tracks / Playlists / Users |
-| **Auth**     | JWT (basic)                       | Upgrade later              |
-| **Testing**  | Jest or Vitest                    | Unit + integration         |
+> **For tech stack, folder structure, database schema:** Read `docs/ARCHITECTURE.md`
 
-Claude must not introduce large framework shifts without explicit confirmation.
+**When you need:** Framework details, deployment config, database schema, API patterns → Read ARCHITECTURE.md first.
 
 ---
 
@@ -131,28 +124,6 @@ socket.on('playlist:track-added', (track) => updateLocalPlaylist(track));
 
 ---
 
-## 🧱 Folder Structure
-
-```
-listener/
-├── src/
-│   ├── server/
-│   │   ├── routes/       # REST endpoints
-│   │   ├── sockets/      # WebSocket handlers
-│   │   ├── models/       # Database models
-│   │   ├── services/     # Business logic
-│   │   └── middleware/   # Auth / validation
-│   ├── client/
-│   │   ├── components/   # UI components
-│   │   ├── services/     # API / socket clients
-│   │   └── utils/        # Helpers
-│   └── shared/           # Shared types / constants
-├── tests/                # Unit & integration tests
-├── config/               # Environment & deployment
-└── docs/                 # PLAN.md / ARCHITECTURE.md / etc.
-```
-
----
 
 ## 🔐 Security & Stability Expectations
 
@@ -198,6 +169,25 @@ listener/
 
 ---
 
+## ⚠️ Common Mistakes & Guardrails
+
+**Mistake 1: Committing without running tests**
+→ **BLOCKED by hook:** Run `npm run test:all` before committing. The pre-commit hook will prevent commits without passing tests.
+
+**Mistake 2: Creating new files when editing would work**
+→ **ALWAYS prefer editing** existing files over creating new ones unless explicitly required.
+
+**Mistake 3: Large framework changes without confirmation**
+→ **ASK FIRST** before introducing new libraries, changing build tools, or restructuring folders.
+
+**Mistake 4: Incomplete TODO updates**
+→ **Update TODO.md** immediately after completing milestones or discovering new bugs.
+
+**Mistake 5: Forgetting to reference docs**
+→ **Check ARCHITECTURE.md** for tech stack questions before asking or guessing.
+
+---
+
 ## ✅ Claude Checklist
 
 Before submitting a change:
@@ -207,6 +197,7 @@ Before submitting a change:
 - [ ] Add or update tests
 - [ ] Suggest validation step (`npm run dev` etc.)
 - [ ] Avoid unrelated refactors
+- [ ] Update TODO.md if milestone completed
 
 ---
 
@@ -218,13 +209,11 @@ Before submitting a change:
 
 ---
 
-## 🧰 Environment Variables (for Claude context)
+## 📚 Project Documentation
 
-Use placeholders — never real secrets.
+- **TODO.md** - Current phase, pending tasks, bug tracking
+- **docs/PLAN.md** - Feature specs and milestones
+- **docs/ARCHITECTURE.md** - Tech stack, folder structure, database schema
+- **docs/BACKLOG.md** - Future ideas and enhancements
 
-```bash
-PORT=3000
-DATABASE_URL=postgresql://user:pass@localhost:5432/listener
-JWT_SECRET=changeme
-ALLOWED_ORIGINS=http://localhost:5173
-```
+**Always check TODO.md before starting work** to see current focus and priorities.
