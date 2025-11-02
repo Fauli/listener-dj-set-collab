@@ -53,8 +53,84 @@ const upload = multer({
 });
 
 /**
- * POST /api/upload
- * Upload audio file and extract metadata
+ * @swagger
+ * /api/upload:
+ *   post:
+ *     summary: Upload audio file
+ *     description: Uploads an audio file, extracts metadata (title, artist, BPM, key), and creates a track record
+ *     tags: [Uploads]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *               - roomId
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Audio file (MP3, WAV, FLAC, M4A, or AIFF)
+ *               roomId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Room ID to associate the track with
+ *     responses:
+ *       201:
+ *         description: File uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 track:
+ *                   $ref: '#/components/schemas/Track'
+ *                 metadata:
+ *                   type: object
+ *                   properties:
+ *                     title:
+ *                       type: string
+ *                       example: "Summer Vibes"
+ *                     artist:
+ *                       type: string
+ *                       example: "DJ Example"
+ *                     bpm:
+ *                       type: number
+ *                       nullable: true
+ *                       example: 128.5
+ *                     key:
+ *                       type: string
+ *                       nullable: true
+ *                       example: "8A"
+ *                     extractedFrom:
+ *                       type: string
+ *                       example: "ID3"
+ *                     originalFilename:
+ *                       type: string
+ *                       example: "track.mp3"
+ *                     fileSize:
+ *                       type: number
+ *                       example: 5242880
+ *       400:
+ *         description: Validation error or file too large
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Room not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/', upload.single('file'), async (req: Request, res: Response) => {
   try {
@@ -145,8 +221,75 @@ router.options('/:trackId/audio', (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/upload/:trackId/audio
- * Stream audio file for a specific track
+ * @swagger
+ * /api/upload/{trackId}/audio:
+ *   get:
+ *     summary: Stream audio file
+ *     description: Streams the audio file for a specific track with proper CORS headers and content type
+ *     tags: [Uploads]
+ *     parameters:
+ *       - in: path
+ *         name: trackId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Track ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Audio file stream
+ *         headers:
+ *           Content-Type:
+ *             description: MIME type of the audio file (audio/mpeg, audio/wav, etc.)
+ *             schema:
+ *               type: string
+ *           Content-Length:
+ *             description: Size of the audio file in bytes
+ *             schema:
+ *               type: integer
+ *           Accept-Ranges:
+ *             description: Indicates support for range requests
+ *             schema:
+ *               type: string
+ *               example: "bytes"
+ *           Content-Disposition:
+ *             description: Filename of the audio file
+ *             schema:
+ *               type: string
+ *         content:
+ *           audio/mpeg:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *           audio/wav:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *           audio/flac:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *           audio/x-m4a:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *           audio/aiff:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Track or audio file not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/:trackId/audio', async (req: Request, res: Response) => {
   try {

@@ -24,9 +24,100 @@ import { getRoomById } from '../models/Room.js';
 const router = Router();
 
 /**
- * POST /api/rooms/:roomId/tracks
- * Add a track to the room's playlist
- * Creates track if it doesn't exist, then adds to playlist
+ * @swagger
+ * /api/rooms/{roomId}/tracks:
+ *   post:
+ *     summary: Add track to playlist
+ *     description: Creates a new track and adds it to the room's playlist at the specified position
+ *     tags: [Tracks]
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Room ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - track
+ *             properties:
+ *               track:
+ *                 type: object
+ *                 required:
+ *                   - title
+ *                   - artist
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                     example: "Summer Vibes"
+ *                   artist:
+ *                     type: string
+ *                     example: "DJ Example"
+ *                   bpm:
+ *                     type: number
+ *                     example: 128
+ *                   key:
+ *                     type: string
+ *                     example: "8A"
+ *                   energy:
+ *                     type: integer
+ *                     minimum: 1
+ *                     maximum: 10
+ *                     example: 7
+ *                   genre:
+ *                     type: string
+ *                     example: "House"
+ *                   year:
+ *                     type: integer
+ *                     example: 2023
+ *                   duration:
+ *                     type: number
+ *                     example: 245.5
+ *                   audioUrl:
+ *                     type: string
+ *                     example: "/api/upload/track-id/audio"
+ *               position:
+ *                 type: integer
+ *                 description: Position in playlist (0-indexed)
+ *                 example: 0
+ *               note:
+ *                 type: string
+ *                 description: DJ notes for this track
+ *                 example: "Drop after vocal intro"
+ *     responses:
+ *       201:
+ *         description: Track added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 setEntry:
+ *                   $ref: '#/components/schemas/SetEntry'
+ *       404:
+ *         description: Room not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/:roomId/tracks', async (req: Request, res: Response) => {
   try {
@@ -86,8 +177,44 @@ router.post('/:roomId/tracks', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/rooms/:roomId/tracks
- * Get the complete playlist for a room
+ * @swagger
+ * /api/rooms/{roomId}/tracks:
+ *   get:
+ *     summary: Get room playlist
+ *     description: Retrieves the complete playlist for a room, ordered by position
+ *     tags: [Tracks]
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Room ID
+ *     responses:
+ *       200:
+ *         description: Playlist retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 tracks:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/SetEntry'
+ *       404:
+ *         description: Room not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/:roomId/tracks', async (req: Request, res: Response) => {
   try {
@@ -112,8 +239,49 @@ router.get('/:roomId/tracks', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/rooms/:roomId/tracks/:entryId
- * Get a specific set entry
+ * @swagger
+ * /api/rooms/{roomId}/tracks/{entryId}:
+ *   get:
+ *     summary: Get playlist entry
+ *     description: Retrieves a specific entry from the playlist
+ *     tags: [Tracks]
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Room ID
+ *       - in: path
+ *         name: entryId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Set entry ID
+ *     responses:
+ *       200:
+ *         description: Entry found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 setEntry:
+ *                   $ref: '#/components/schemas/SetEntry'
+ *       404:
+ *         description: Entry not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/:roomId/tracks/:entryId', async (req: Request, res: Response) => {
   try {
@@ -136,8 +304,79 @@ router.get('/:roomId/tracks/:entryId', async (req: Request, res: Response) => {
 });
 
 /**
- * PUT /api/rooms/:roomId/tracks/:entryId
- * Update a set entry (note or metadata)
+ * @swagger
+ * /api/rooms/{roomId}/tracks/{entryId}:
+ *   put:
+ *     summary: Update playlist entry
+ *     description: Updates track note or cue points for a playlist entry
+ *     tags: [Tracks]
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Room ID
+ *       - in: path
+ *         name: entryId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Set entry ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               note:
+ *                 type: string
+ *                 description: DJ notes
+ *                 example: "Drop after vocal intro"
+ *               cuePoints:
+ *                 type: object
+ *                 properties:
+ *                   start:
+ *                     type: number
+ *                     nullable: true
+ *                     example: 30.5
+ *                   end:
+ *                     type: number
+ *                     nullable: true
+ *                     example: 180.0
+ *                   A:
+ *                     type: number
+ *                     nullable: true
+ *                     example: 65.2
+ *                   B:
+ *                     type: number
+ *                     nullable: true
+ *                     example: 120.8
+ *     responses:
+ *       200:
+ *         description: Entry updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 setEntry:
+ *                   $ref: '#/components/schemas/SetEntry'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.put('/:roomId/tracks/:entryId', async (req: Request, res: Response) => {
   try {
@@ -169,8 +408,63 @@ router.put('/:roomId/tracks/:entryId', async (req: Request, res: Response) => {
 });
 
 /**
- * PUT /api/rooms/:roomId/tracks/:entryId/reorder
- * Reorder a track in the playlist
+ * @swagger
+ * /api/rooms/{roomId}/tracks/{entryId}/reorder:
+ *   put:
+ *     summary: Reorder track in playlist
+ *     description: Changes the position of a track in the playlist. Other tracks are automatically shifted.
+ *     tags: [Tracks]
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Room ID
+ *       - in: path
+ *         name: entryId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Set entry ID to move
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPosition
+ *             properties:
+ *               newPosition:
+ *                 type: integer
+ *                 minimum: 0
+ *                 description: New position in playlist (0-indexed)
+ *                 example: 3
+ *     responses:
+ *       200:
+ *         description: Track reordered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 setEntry:
+ *                   $ref: '#/components/schemas/SetEntry'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.put('/:roomId/tracks/:entryId/reorder', async (req: Request, res: Response) => {
   try {
@@ -202,8 +496,52 @@ router.put('/:roomId/tracks/:entryId/reorder', async (req: Request, res: Respons
 });
 
 /**
- * DELETE /api/rooms/:roomId/tracks/:entryId
- * Remove a track from the playlist
+ * @swagger
+ * /api/rooms/{roomId}/tracks/{entryId}:
+ *   delete:
+ *     summary: Remove track from playlist
+ *     description: Removes a track from the playlist and automatically shifts remaining tracks
+ *     tags: [Tracks]
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Room ID
+ *       - in: path
+ *         name: entryId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Set entry ID
+ *     responses:
+ *       200:
+ *         description: Track removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Track removed from playlist"
+ *                 setEntry:
+ *                   $ref: '#/components/schemas/SetEntry'
+ *       404:
+ *         description: Entry not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.delete('/:roomId/tracks/:entryId', async (req: Request, res: Response) => {
   try {

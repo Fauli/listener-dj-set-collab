@@ -7,11 +7,13 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import roomRoutes from './routes/rooms.js';
 import trackRoutes from './routes/tracks.js';
 import uploadRoutes from './routes/uploads.js';
 import { registerRoomHandlers } from './sockets/roomHandlers.js';
 import { registerPlaylistHandlers } from './sockets/playlistHandlers.js';
+import { swaggerSpec } from './config/swagger.js';
 
 // Load environment variables
 dotenv.config();
@@ -32,9 +34,37 @@ app.use(cors());
 app.use(express.json());
 
 // Health check endpoint
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     description: Returns server health status
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Server is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "ok"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// API Documentation with Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'Listener API Docs',
+  customCss: '.swagger-ui .topbar { display: none }',
+}));
 
 // API routes
 app.use('/api/rooms', roomRoutes);
@@ -55,6 +85,8 @@ io.on('connection', (socket) => {
 httpServer.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`🎧 Listener server running on http://localhost:${PORT}`);
+  // eslint-disable-next-line no-console
+  console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
   // eslint-disable-next-line no-console
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

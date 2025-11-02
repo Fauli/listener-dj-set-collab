@@ -10,8 +10,70 @@ import { createRoom, getRoomById, deleteRoom, getAllRooms } from '../models/Room
 const router = express.Router();
 
 /**
- * POST /api/rooms
- * Create a new room
+ * @swagger
+ * /api/rooms:
+ *   post:
+ *     summary: Create a new room
+ *     description: Creates a new DJ room with a unique ID and returns a joinable link
+ *     tags: [Rooms]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - ownerId
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Room name
+ *                 example: "Friday Night Mix"
+ *               ownerId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: User ID of the room creator
+ *                 example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       201:
+ *         description: Room created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 room:
+ *                   $ref: '#/components/schemas/Room'
+ *                 joinLink:
+ *                   type: string
+ *                   description: Full URL to join the room
+ *                   example: "http://localhost:3000/rooms/123e4567-e89b-12d3-a456-426614174000"
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Validation failed"
+ *                 issues:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       path:
+ *                         type: string
+ *                       message:
+ *                         type: string
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/', async (req: Request, res: Response) => {
   try {
@@ -49,8 +111,49 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/rooms/:id
- * Get room by ID
+ * @swagger
+ * /api/rooms/{id}:
+ *   get:
+ *     summary: Get room by ID
+ *     description: Retrieves detailed information about a specific room
+ *     tags: [Rooms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Room ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Room found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 room:
+ *                   $ref: '#/components/schemas/Room'
+ *       404:
+ *         description: Room not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       400:
+ *         description: Invalid room ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
@@ -88,9 +191,52 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 /**
- * DELETE /api/rooms/:id
- * Delete room (owner only - auth will be added later)
- * TODO: Add authentication and authorization middleware (Phase 2.3)
+ * @swagger
+ * /api/rooms/{id}:
+ *   delete:
+ *     summary: Delete a room
+ *     description: Deletes a room and all associated data (playlists, tracks, sessions). Owner authorization will be added in Phase 2.3.
+ *     tags: [Rooms]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Room ID to delete
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Room deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Room deleted successfully"
+ *                 room:
+ *                   $ref: '#/components/schemas/Room'
+ *       404:
+ *         description: Room not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       400:
+ *         description: Invalid room ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
@@ -134,8 +280,44 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/rooms
- * Get all rooms (for future listing feature)
+ * @swagger
+ * /api/rooms:
+ *   get:
+ *     summary: List all rooms
+ *     description: Retrieves a list of all rooms with optional limit
+ *     tags: [Rooms]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Maximum number of rooms to return
+ *         example: 20
+ *     responses:
+ *       200:
+ *         description: List of rooms
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 rooms:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Room'
+ *                 count:
+ *                   type: integer
+ *                   description: Number of rooms returned
+ *                   example: 5
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/', async (req: Request, res: Response) => {
   try {

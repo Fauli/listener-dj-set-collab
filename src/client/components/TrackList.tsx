@@ -22,7 +22,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { usePlaylistStore, type PlaylistTrack } from '../stores/playlistStore';
+import { useDeckStore } from '../stores/deckStore';
 import { removeTrack, updateTrackNote, reorderTrack } from '../services/socket';
+import { areKeysCompatible, getKeyRelationship } from '../utils/camelotKey';
 
 interface TrackListProps {
   roomId: string;
@@ -43,6 +45,10 @@ function SortableTrackItem({
   onUpdateNoteValue,
   onRemove,
   onLoadToDeck,
+  compatibleWithDeckA,
+  compatibleWithDeckB,
+  relationshipA,
+  relationshipB,
 }: {
   entry: PlaylistTrack;
   roomId: string;
@@ -54,6 +60,10 @@ function SortableTrackItem({
   onUpdateNoteValue: (value: string) => void;
   onRemove: () => void;
   onLoadToDeck?: (deckId: 'A' | 'B', track: PlaylistTrack) => void;
+  compatibleWithDeckA?: boolean;
+  compatibleWithDeckB?: boolean;
+  relationshipA?: 'same' | 'adjacent' | 'relative' | null;
+  relationshipB?: 'same' | 'adjacent' | 'relative' | null;
 }) {
   const {
     attributes,
@@ -70,11 +80,22 @@ function SortableTrackItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // Determine border color based on key compatibility
+  let borderClass = '';
+  if (compatibleWithDeckA && compatibleWithDeckB) {
+    // Compatible with both - show gradient or prioritize Deck A
+    borderClass = 'border-l-4 border-l-primary-500';
+  } else if (compatibleWithDeckA) {
+    borderClass = 'border-l-4 border-l-primary-500';
+  } else if (compatibleWithDeckB) {
+    borderClass = 'border-l-4 border-l-purple-500';
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="px-6 py-2 hover:bg-gray-750 transition-colors group bg-gray-800"
+      className={`px-6 py-2 hover:bg-gray-750 transition-colors group bg-gray-800 ${borderClass}`}
       data-track-item
     >
       <div className="flex items-center gap-3">
@@ -112,9 +133,20 @@ function SortableTrackItem({
               {entry.track.title}
             </h3>
             {/* Metadata inline with title */}
-            <div className="flex gap-2 text-xs text-gray-500">
+            <div className="flex gap-2 text-xs text-gray-500 items-center">
               {entry.track.bpm && <span>{entry.track.bpm} BPM</span>}
-              {entry.track.key && <span>• {entry.track.key}</span>}
+              {entry.track.key && (
+                <span className="flex items-center gap-1">
+                  • {entry.track.key}
+                  {/* Compatibility indicators */}
+                  {compatibleWithDeckA && (
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary-500" title="Compatible with Deck A"></span>
+                  )}
+                  {compatibleWithDeckB && (
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-purple-500" title="Compatible with Deck B"></span>
+                  )}
+                </span>
+              )}
               {entry.track.energy && <span>• E{entry.track.energy}</span>}
             </div>
           </div>
@@ -228,6 +260,12 @@ export default function TrackList({ roomId, onLoadToDeck }: TrackListProps) {
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [noteValue, setNoteValue] = useState('');
 
+  // Get currently loaded deck tracks for key compatibility checking
+  const deckA = useDeckStore((state) => state.deckA);
+  const deckB = useDeckStore((state) => state.deckB);
+  const deckAKey = deckA.track?.track.key;
+  const deckBKey = deckB.track?.track.key;
+
   // Drag & drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -302,21 +340,33 @@ export default function TrackList({ roomId, onLoadToDeck }: TrackListProps) {
           strategy={verticalListSortingStrategy}
         >
           <div className="divide-y divide-gray-700">
-            {tracks.map((entry) => (
-              <SortableTrackItem
-                key={entry.id}
-                entry={entry}
-                roomId={roomId}
-                isEditingNote={editingNote === entry.id}
-                noteValue={noteValue}
-                onEditNote={(currentNote) => handleEditNote(entry.id, currentNote)}
-                onSaveNote={() => handleSaveNote(entry.id)}
-                onCancelEdit={handleCancelEdit}
-                onUpdateNoteValue={setNoteValue}
-                onRemove={() => handleRemove(entry.id)}
-                onLoadToDeck={onLoadToDeck}
-              />
-            ))}
+            {tracks.map((entry) => {
+              // Calculate key compatibility
+              const compatibleWithDeckA = deckAKey ? areKeysCompatible(entry.track.key, deckAKey) : false;
+              const compatibleWithDeckB = deckBKey ? areKeysCompatible(entry.track.key, deckBKey) : false;
+              const relationshipA = deckAKey ? getKeyRelationship(entry.track.key, deckAKey) : null;
+              const relationshipB = deckBKey ? getKeyRelationship(entry.track.key, deckBKey) : null;
+
+              return (
+                <SortableTrackItem
+                  key={entry.id}
+                  entry={entry}
+                  roomId={roomId}
+                  isEditingNote={editingNote === entry.id}
+                  noteValue={noteValue}
+                  onEditNote={(currentNote) => handleEditNote(entry.id, currentNote)}
+                  onSaveNote={() => handleSaveNote(entry.id)}
+                  onCancelEdit={handleCancelEdit}
+                  onUpdateNoteValue={setNoteValue}
+                  onRemove={() => handleRemove(entry.id)}
+                  onLoadToDeck={onLoadToDeck}
+                  compatibleWithDeckA={compatibleWithDeckA}
+                  compatibleWithDeckB={compatibleWithDeckB}
+                  relationshipA={relationshipA}
+                  relationshipB={relationshipB}
+                />
+              );
+            })}
           </div>
         </SortableContext>
       </DndContext>

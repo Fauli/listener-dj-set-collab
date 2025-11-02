@@ -60,6 +60,24 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
     setFirstBeatTime(deckId, null);
   };
 
+  const handleNudgeBeatGridLeft = () => {
+    if (deck.firstBeatTime !== null) {
+      // Shift beat grid earlier by 10ms
+      setFirstBeatTime(deckId, deck.firstBeatTime - 0.01);
+      // Also seek playback backward by 10ms so DJ can hear the alignment change
+      seek(Math.max(0, deck.currentTime - 0.01));
+    }
+  };
+
+  const handleNudgeBeatGridRight = () => {
+    if (deck.firstBeatTime !== null) {
+      // Shift beat grid later by 10ms
+      setFirstBeatTime(deckId, deck.firstBeatTime + 0.01);
+      // Also seek playback forward by 10ms so DJ can hear the alignment change
+      seek(deck.currentTime + 0.01);
+    }
+  };
+
   const handleSetCue = async (cueType: keyof CuePointsType) => {
     // Snap to nearest beat if beat grid is set
     let cueTime = deck.currentTime;
@@ -501,7 +519,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
               </button>
 
               {/* Beat Grid - Compact */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 flex items-center gap-1">
                 <BeatGridControl
                   currentTime={deck.currentTime}
                   firstBeatTime={deck.firstBeatTime}
@@ -510,6 +528,37 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                   onClearBeatGrid={handleClearBeatGrid}
                   accentColor={accentColor}
                 />
+                {/* Beat Grid Nudge Buttons */}
+                {deck.firstBeatTime !== null && (
+                  <div className="flex items-center gap-0.5 ml-1">
+                    <button
+                      onClick={handleNudgeBeatGridLeft}
+                      className={`p-1 rounded text-xs font-medium transition-all ${
+                        accentColor === 'primary'
+                          ? 'bg-primary-600/20 hover:bg-primary-600/40 text-primary-300'
+                          : 'bg-purple-600/20 hover:bg-purple-600/40 text-purple-300'
+                      }`}
+                      title="Nudge beat grid earlier (10ms)"
+                    >
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleNudgeBeatGridRight}
+                      className={`p-1 rounded text-xs font-medium transition-all ${
+                        accentColor === 'primary'
+                          ? 'bg-primary-600/20 hover:bg-primary-600/40 text-primary-300'
+                          : 'bg-purple-600/20 hover:bg-purple-600/40 text-purple-300'
+                      }`}
+                      title="Nudge beat grid later (10ms)"
+                    >
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Cue Points */}
