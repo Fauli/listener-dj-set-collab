@@ -149,121 +149,155 @@ export async function updateSetEntry(entryId: string, data: UpdateSetEntryData) 
 /**
  * Remove track from playlist
  * Automatically shifts remaining tracks to fill the gap
+ * Uses transaction with serializable isolation to prevent race conditions
  */
 export async function removeTrackFromPlaylist(entryId: string) {
-  // Get the entry to delete
-  const entry = await prisma.setEntry.findUnique({
-    where: { id: entryId },
-    select: { roomId: true, position: true },
-  });
+  return await prisma.$transaction(
+    async (tx) => {
+      // Get the entry to delete
+      const entry = await tx.setEntry.findUnique({
+        where: { id: entryId },
+        select: { roomId: true, position: true },
+      });
 
-  if (!entry) {
-    throw new Error('Set entry not found');
-  }
+      if (!entry) {
+        throw new Error('Set entry not found');
+      }
 
-  // Delete the entry
-  const deletedEntry = await prisma.setEntry.delete({
-    where: { id: entryId },
-    include: { track: true },
-  });
+      // Lock all entries in this room to prevent concurrent modifications
+      await tx.$executeRaw`
+        SELECT id FROM "SetEntry"
+        WHERE "roomId" = ${entry.roomId}
+        FOR UPDATE
+      `;
 
-  // Shift remaining tracks down to fill the gap
-  await prisma.setEntry.updateMany({
-    where: {
-      roomId: entry.roomId,
-      position: {
-        gt: entry.position,
-      },
+      // Delete the entry
+      const deletedEntry = await tx.setEntry.delete({
+        where: { id: entryId },
+        include: { track: true },
+      });
+
+      // Get all remaining tracks in the room ordered by position
+      const remainingTracks = await tx.setEntry.findMany({
+        where: { roomId: entry.roomId },
+        orderBy: { position: 'asc' },
+        select: { id: true },
+      });
+
+      // Step 1: Move all tracks to temporary negative positions to avoid conflicts
+      for (let i = 0; i < remainingTracks.length; i++) {
+        await tx.setEntry.update({
+          where: { id: remainingTracks[i].id },
+          data: { position: -(i + 1000) }, // Use large negative numbers to avoid conflicts
+        });
+      }
+
+      // Step 2: Update to final sequential positions
+      for (let i = 0; i < remainingTracks.length; i++) {
+        await tx.setEntry.update({
+          where: { id: remainingTracks[i].id },
+          data: { position: i },
+        });
+      }
+
+      return deletedEntry;
     },
-    data: {
-      position: {
-        decrement: 1,
-      },
-    },
-  });
-
-  return deletedEntry;
+    {
+      isolationLevel: 'Serializable',
+      maxWait: 5000,
+      timeout: 10000,
+    }
+  );
 }
 
 /**
  * Update position of a track (reordering)
  * Handles shifting of other tracks automatically
- * Uses transaction to prevent race conditions during concurrent reorders
+ * Uses transaction with serializable isolation to prevent race conditions during concurrent reorders
  */
 export async function updatePosition(entryId: string, newPosition: number) {
-  // Wrap entire operation in transaction for atomicity
-  return await prisma.$transaction(async (tx) => {
-    const entry = await tx.setEntry.findUnique({
-      where: { id: entryId },
-      select: { roomId: true, position: true },
-    });
+  // Wrap entire operation in transaction with serializable isolation level
+  // This prevents concurrent modifications from interfering with each other
+  return await prisma.$transaction(
+    async (tx) => {
+      const entry = await tx.setEntry.findUnique({
+        where: { id: entryId },
+        select: { roomId: true, position: true },
+      });
 
-    if (!entry) {
-      throw new Error('Set entry not found');
-    }
+      if (!entry) {
+        throw new Error('Set entry not found');
+      }
 
-    const oldPosition = entry.position;
+      const oldPosition = entry.position;
 
-    if (oldPosition === newPosition) {
-      // No change needed
-      return await tx.setEntry.findUnique({
+      if (oldPosition === newPosition) {
+        // No change needed
+        return await tx.setEntry.findUnique({
+          where: { id: entryId },
+          include: { track: true },
+        });
+      }
+
+      // Lock all entries in this room to prevent concurrent reorders
+      await tx.$executeRaw`
+        SELECT id FROM "SetEntry"
+        WHERE "roomId" = ${entry.roomId}
+        FOR UPDATE
+      `;
+
+      // Get all entries in the room, ordered by position
+      const allEntries = await tx.setEntry.findMany({
+        where: { roomId: entry.roomId },
+        orderBy: { position: 'asc' },
+        select: { id: true, position: true },
+      });
+
+      // Calculate new positions for all entries
+      const newPositions = new Map<string, number>();
+
+      // Remove the entry being moved from its current position
+      const entriesWithoutTarget = allEntries.filter(e => e.id !== entryId);
+
+      // Insert it at the new position
+      const finalOrder = [...entriesWithoutTarget];
+      finalOrder.splice(newPosition, 0, { id: entryId, position: oldPosition });
+
+      // Assign sequential positions
+      finalOrder.forEach((e, index) => {
+        newPositions.set(e.id, index);
+      });
+
+      // Phase 1: Move all entries to temporary negative positions
+      for (let i = 0; i < allEntries.length; i++) {
+        await tx.setEntry.update({
+          where: { id: allEntries[i].id },
+          data: { position: -(i + 1000) },
+        });
+      }
+
+      // Phase 2: Move all entries to their final positions
+      for (const [id, position] of newPositions.entries()) {
+        await tx.setEntry.update({
+          where: { id },
+          data: { position },
+        });
+      }
+
+      // Return the updated entry with track info
+      const updatedEntry = await tx.setEntry.findUnique({
         where: { id: entryId },
         include: { track: true },
       });
+
+      return updatedEntry;
+    },
+    {
+      isolationLevel: 'Serializable',
+      maxWait: 5000,
+      timeout: 10000,
     }
-
-    // Step 1: Move the entry to a temporary negative position to avoid conflicts
-    // Use unique temporary position to prevent concurrent reorder conflicts
-    const tempPosition = -(Date.now() + Math.floor(Math.random() * 1000000));
-    await tx.setEntry.update({
-      where: { id: entryId },
-      data: { position: tempPosition },
-    });
-
-    // Step 2: Shift other tracks based on direction of movement
-    if (oldPosition < newPosition) {
-      // Moving down: shift tracks between old and new position down
-      await tx.setEntry.updateMany({
-        where: {
-          roomId: entry.roomId,
-          position: {
-            gt: oldPosition,
-            lte: newPosition,
-          },
-        },
-        data: {
-          position: {
-            decrement: 1,
-          },
-        },
-      });
-    } else {
-      // Moving up: shift tracks between new and old position up
-      await tx.setEntry.updateMany({
-        where: {
-          roomId: entry.roomId,
-          position: {
-            gte: newPosition,
-            lt: oldPosition,
-          },
-        },
-        data: {
-          position: {
-            increment: 1,
-          },
-        },
-      });
-    }
-
-    // Step 3: Move the entry to its final position
-    const updatedEntry = await tx.setEntry.update({
-      where: { id: entryId },
-      data: { position: newPosition },
-      include: { track: true },
-    });
-
-    return updatedEntry;
-  });
+  );
 }
 
 /**

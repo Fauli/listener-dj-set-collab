@@ -141,7 +141,9 @@ export default function RoomPage() {
 
     // Listen for track removed
     const unsubscribeTrackRemoved = onTrackRemoved((data: TrackRemovedData) => {
+      console.log('🗑️  Received playlist:track-removed event:', data);
       removeTrack(data.entryId);
+      console.log('✅ Called removeTrack for entryId:', data.entryId);
     });
 
     // Listen for track updated

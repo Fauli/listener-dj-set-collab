@@ -913,8 +913,8 @@ The project has evolved from a simple playlist manager into a **feature-rich DJ 
 
 When going through the TODO next time, take these into consideration
 
-1. When a track is loaded in Deck A, color code the tracks camelot notation in the playlist, in case it's a match (i.e. the same value or +/-1 in number or A/B of the same number)
-2. Sync button that syncs the the track synced to the other track, i.e. the beats match (based on the beatgrids, high prio feature)
+1. Sync button that syncs the the track synced to the other track, i.e. the beats match (based on the beatgrids, high prio feature)
+2. When a track is loaded in Deck A, color code the tracks camelot notation in the playlist, in case it's a match (i.e. the same value or +/-1 in number or A/B of the same number)
 3. calculate the overall set playtime (full and with transitions). Meaning the tracks just as it. But also the based on the start and en cues set in the tracks (this is a feature for later, but keep it in mind - maybe call it calculate true set length or so)
 
 ---
