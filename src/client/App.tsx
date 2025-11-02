@@ -14,13 +14,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        fontFamily: 'monospace'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          fontFamily: 'monospace',
+        }}
+      >
         Loading...
       </div>
     );
@@ -64,11 +66,7 @@ function HomePage() {
 
         <header className="mb-4 text-center">
           <div className="flex items-center justify-center mb-2">
-            <img
-              src="/listener-logo.png"
-              alt="Listener"
-              className="h-80 w-auto"
-            />
+            <img src="/listener-logo.png" alt="Listener" className="h-60 w-auto" />
           </div>
           <p className="text-gray-400 text-lg">Collaborative Real-Time DJ Playlist Tool</p>
         </header>

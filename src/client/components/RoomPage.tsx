@@ -214,7 +214,7 @@ export default function RoomPage() {
       <img
         src="/listener-logo.png"
         alt="Listener"
-        className="absolute top-1 right-8 h-40 w-auto opacity-60"
+        className="absolute top-10 right-8 h-24 w-auto opacity-60"
       />
 
       {/* Header */}
