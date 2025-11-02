@@ -22,6 +22,7 @@ export interface Track {
   bpm?: number | null;
   key?: string | null;
   energy?: number | null;
+  duration?: number | null;  // Duration in seconds
   sourceURI?: string | null;
 }
 

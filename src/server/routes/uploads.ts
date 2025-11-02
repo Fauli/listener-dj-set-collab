@@ -167,6 +167,7 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
       bpm: metadata.bpm,
       key: metadata.key,
       energy: undefined, // Energy is not auto-detected, user can add manually
+      duration: metadata.duration,
       sourceURI: req.file.filename, // Store the filename for later retrieval
     });
 

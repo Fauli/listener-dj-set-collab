@@ -3,11 +3,15 @@
  */
 
 import express, { Request, Response } from 'express';
+import { Server } from 'socket.io';
 import { ZodError } from 'zod';
 import { createRoomSchema, roomIdSchema } from '../validators/roomSchemas.js';
 import { createRoom, getRoomById, deleteRoom, getAllRooms } from '../models/Room.js';
+import { updateSetEntry, getSetEntryById } from '../models/SetEntry.js';
 
-const router = express.Router();
+// Factory function to create router with io instance
+export function createRoomsRouter(io: Server) {
+  const router = express.Router();
 
 /**
  * @swagger
@@ -335,4 +339,112 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-export default router;
+/**
+ * @swagger
+ * /api/rooms/{roomId}/tracks/{trackId}:
+ *   put:
+ *     summary: Update playlist track (SetEntry)
+ *     description: Updates a track in the room's playlist (e.g., cue points, note). Broadcasts update to all clients via WebSocket.
+ *     tags: [Rooms]
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Room ID
+ *       - in: path
+ *         name: trackId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: SetEntry ID (playlist track ID)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               cuePoints:
+ *                 type: object
+ *                 properties:
+ *                   start:
+ *                     type: number
+ *                     nullable: true
+ *                   end:
+ *                     type: number
+ *                     nullable: true
+ *                   A:
+ *                     type: number
+ *                     nullable: true
+ *                   B:
+ *                     type: number
+ *                     nullable: true
+ *               note:
+ *                 type: string
+ *                 nullable: true
+ *     responses:
+ *       200:
+ *         description: Track updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 setEntry:
+ *                   $ref: '#/components/schemas/SetEntry'
+ *       404:
+ *         description: Track not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put('/:roomId/tracks/:trackId', async (req: Request, res: Response) => {
+  try {
+    const { roomId, trackId } = req.params;
+    const updates = req.body;
+
+    // Update the SetEntry
+    const updatedEntry = await updateSetEntry(trackId, updates);
+
+    // Fetch complete entry with track data for broadcast
+    const fullEntry = await getSetEntryById(trackId);
+
+    if (!fullEntry) {
+      return res.status(404).json({ error: 'Track not found' });
+    }
+
+    // Broadcast update to all clients in the room via WebSocket
+    io.to(roomId).emit('playlist:track-updated', {
+      setEntry: fullEntry,
+    });
+
+    console.log(`Track ${trackId} updated in room ${roomId}:`, updates);
+
+    res.json({ setEntry: updatedEntry });
+  } catch (error) {
+    console.error('Error updating track:', error);
+
+    if (error instanceof Error && error.message.includes('Record to update not found')) {
+      return res.status(404).json({ error: 'Track not found' });
+    }
+
+    res.status(500).json({
+      error: 'Failed to update track',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+  return router;
+}

@@ -11,6 +11,7 @@ export interface CreateTrackData {
   bpm?: number;
   key?: string;
   energy?: number;
+  duration?: number;
   sourceURI?: string;
 }
 
@@ -20,6 +21,7 @@ export interface UpdateTrackData {
   bpm?: number | null;
   key?: string | null;
   energy?: number | null;
+  duration?: number | null;
   sourceURI?: string | null;
 }
 
@@ -34,6 +36,7 @@ export async function createTrack(data: CreateTrackData) {
       bpm: data.bpm,
       key: data.key,
       energy: data.energy,
+      duration: data.duration,
       sourceURI: data.sourceURI,
     },
   });

@@ -8,7 +8,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
-import roomRoutes from './routes/rooms.js';
+import { createRoomsRouter } from './routes/rooms.js';
 import trackRoutes from './routes/tracks.js';
 import uploadRoutes from './routes/uploads.js';
 import { registerRoomHandlers } from './sockets/roomHandlers.js';
@@ -67,7 +67,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 }));
 
 // API routes
-app.use('/api/rooms', roomRoutes);
+app.use('/api/rooms', createRoomsRouter(io));
 app.use('/api/rooms', trackRoutes);
 app.use('/api/upload', uploadRoutes);
 

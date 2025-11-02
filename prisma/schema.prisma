@@ -39,6 +39,7 @@ model Track {
   bpm       Int?
   key       String?
   energy    Int?
+  duration  Int?     // Duration in seconds
   sourceURI String?
   createdAt DateTime @default(now())
 

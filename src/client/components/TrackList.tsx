@@ -25,6 +25,7 @@ import { usePlaylistStore, type PlaylistTrack } from '../stores/playlistStore';
 import { useDeckStore } from '../stores/deckStore';
 import { removeTrack, updateTrackNote, reorderTrack } from '../services/socket';
 import { areKeysCompatible, getKeyRelationship } from '../utils/camelotKey';
+import SetPlaytimeStats from './SetPlaytimeStats';
 
 interface TrackListProps {
   roomId: string;
@@ -370,6 +371,8 @@ export default function TrackList({ roomId, onLoadToDeck }: TrackListProps) {
           </div>
         </SortableContext>
       </DndContext>
+
+      <SetPlaytimeStats tracks={tracks} />
     </div>
   );
 }
