@@ -7,7 +7,7 @@ import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useDeckStore } from '../stores/deckStore';
 import type { PlaylistTrack } from '../stores/playlistStore';
 import type { CuePoints as CuePointsType } from '../stores/deckStore';
-import { quantizeToNearestBeat } from '../utils/beatGrid';
+import { quantizeToNearestBeat, calculateAlignedPosition } from '../utils/beatGrid';
 import TrackInfo from './TrackInfo';
 import Waveform from './Waveform';
 import ZoomedWaveform from './ZoomedWaveform';
@@ -132,6 +132,52 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
     changeRate(clampedRate);
   };
 
+  const handleSyncAndPlay = () => {
+    // Sync BPM and beat-align, then start playback
+    if (!canSyncAndPlay) return;
+
+    // Step 1: Match BPM first
+    handleSync();
+
+    // Step 2: Bar-aware beat alignment
+    // Get the source deck's (playing deck's) current beat info
+    const sourceBeatDuration = 60 / (otherDeck.track!.track.bpm! * otherDeck.rate);
+    const sourceTimeSinceFirstBeat = otherDeck.currentTime - otherDeck.firstBeatTime!;
+    const sourceAbsoluteBeat = sourceTimeSinceFirstBeat / sourceBeatDuration;
+    const sourceBeatInBar = ((Math.floor(sourceAbsoluteBeat) % 4) + 4) % 4; // 0-3 (beat 1-4)
+    const sourcePhase = sourceAbsoluteBeat - Math.floor(sourceAbsoluteBeat); // 0-1 within current beat
+
+    // Get this deck's current position info
+    const targetBeatDuration = 60 / (deck.track!.track.bpm! * deck.rate);
+    const targetTimeSinceFirstBeat = deck.currentTime - deck.firstBeatTime!;
+    const targetAbsoluteBeat = targetTimeSinceFirstBeat / targetBeatDuration;
+    const currentBeatInBar = ((Math.floor(targetAbsoluteBeat) % 4) + 4) % 4; // 0-3 (beat 1-4)
+
+    // Find the nearest beat with the same beat-in-bar position
+    // Calculate how many beats to shift forward or backward
+    let beatShift = sourceBeatInBar - currentBeatInBar;
+
+    // Choose the closest direction (forward or backward)
+    if (beatShift > 2) beatShift -= 4;
+    if (beatShift < -2) beatShift += 4;
+
+    // Calculate the target beat number
+    const targetBeat = Math.floor(targetAbsoluteBeat) + beatShift;
+    const targetBeatTime = deck.firstBeatTime! + (targetBeat * targetBeatDuration);
+
+    // Apply the source's phase to this beat
+    const alignedPosition = targetBeatTime + (sourcePhase * targetBeatDuration);
+
+    // Step 3: Seek to aligned position (small adjustment from current position)
+    seek(Math.max(0, alignedPosition));
+
+    // Step 4: Start playback
+    // Use a small delay to ensure seek completes
+    setTimeout(() => {
+      play();
+    }, 50);
+  };
+
   // Check if decks are in sync (within 0.1 BPM)
   const isInSync =
     deck.track?.track.bpm &&
@@ -142,6 +188,19 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
 
   // Can sync if both decks have tracks with BPM and not already in sync
   const canSync = deck.track?.track.bpm && otherDeck.track?.track.bpm && !isInSync;
+
+  // Can sync and play if:
+  // 1. Both decks have tracks with BPM
+  // 2. Both decks have beat grids set
+  // 3. Other deck is playing
+  // 4. This deck is not playing
+  const canSyncAndPlay =
+    deck.track?.track.bpm &&
+    otherDeck.track?.track.bpm &&
+    deck.firstBeatTime !== null &&
+    otherDeck.firstBeatTime !== null &&
+    otherDeck.isPlaying &&
+    !deck.isPlaying;
 
   const audioUrl = deck.track ? `http://localhost:3000/api/upload/${deck.track.track.id}/audio` : null;
 
@@ -393,6 +452,52 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                     />
                   </svg>
                 )}
+              </button>
+
+              {/* Sync Play Button - Beat-aligned playback */}
+              <button
+                onClick={handleSyncAndPlay}
+                disabled={!canSyncAndPlay}
+                className={`p-1.5 rounded text-xs font-medium transition-all flex items-center justify-center flex-shrink-0 ${
+                  canSyncAndPlay
+                    ? accentColor === 'primary'
+                      ? 'bg-primary-600 hover:bg-primary-700 text-white'
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                }`}
+                title={
+                  !deck.track?.track.bpm || !otherDeck.track?.track.bpm
+                    ? 'Both decks need tracks with BPM'
+                    : deck.firstBeatTime === null || otherDeck.firstBeatTime === null
+                    ? 'Both decks need beat grids set'
+                    : !otherDeck.isPlaying
+                    ? 'Other deck must be playing'
+                    : deck.isPlaying
+                    ? 'This deck is already playing'
+                    : 'Sync BPM, align beats, and play'
+                }
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9"
+                    opacity="0.6"
+                  />
+                </svg>
               </button>
 
               {/* Beat Grid - Compact */}

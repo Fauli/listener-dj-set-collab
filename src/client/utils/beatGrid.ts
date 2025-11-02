@@ -100,3 +100,57 @@ export function getBeatInBar(time: number, params: BeatGridParams): number {
   const beatNumber = getClosestBeat(time, params);
   return ((beatNumber - 1) % 4) + 1;
 }
+
+/**
+ * Calculate beat phase (0-1 representing position within current beat)
+ * @param time - Time in seconds
+ * @param params - Beat grid parameters
+ * @returns Object with beatNumber (which beat we're on) and phase (0-1 within that beat)
+ */
+export function getBeatPhase(time: number, params: BeatGridParams): { beatNumber: number; phase: number } {
+  const { firstBeatTime, bpm, rate = 1.0 } = params;
+  const beatDuration = 60 / (bpm * rate);
+  const timeSinceFirstBeat = time - firstBeatTime;
+  const absoluteBeatNumber = timeSinceFirstBeat / beatDuration + 1;
+  const beatNumber = Math.floor(absoluteBeatNumber);
+  const phase = absoluteBeatNumber - beatNumber; // 0-1 within current beat
+
+  return {
+    beatNumber: Math.max(1, beatNumber),
+    phase: Math.max(0, Math.min(1, phase)),
+  };
+}
+
+/**
+ * Calculate the aligned position for beat-synced playback
+ * Given a source track's current position, find where the target track should seek
+ * to have its beats aligned with the source track
+ *
+ * @param sourceTime - Current playback time of the source track (seconds)
+ * @param sourceParams - Beat grid parameters of the source track
+ * @param targetParams - Beat grid parameters of the target track
+ * @returns Time in seconds where the target track should seek to for beat alignment
+ */
+export function calculateAlignedPosition(
+  sourceTime: number,
+  sourceParams: BeatGridParams,
+  targetParams: BeatGridParams
+): number {
+  // Get the source track's current beat phase
+  const sourcePhase = getBeatPhase(sourceTime, sourceParams);
+
+  // Calculate target track's beat duration
+  const targetBeatDuration = 60 / (targetParams.bpm * (targetParams.rate || 1.0));
+
+  // Find the nearest beat in the target track
+  // We want to start at a beat position that matches the source's phase
+  const targetBeatNumber = Math.round(sourcePhase.beatNumber);
+
+  // Calculate the time of that beat in the target track
+  const targetBeatTime = getBeatTime(targetBeatNumber, targetParams);
+
+  // Add the phase offset to align within the beat
+  const alignedPosition = targetBeatTime + (sourcePhase.phase * targetBeatDuration);
+
+  return Math.max(0, alignedPosition); // Ensure we don't go negative
+}
