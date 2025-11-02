@@ -7,13 +7,17 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import session from 'express-session';
+import passport from 'passport';
 import swaggerUi from 'swagger-ui-express';
 import { createRoomsRouter } from './routes/rooms.js';
 import trackRoutes from './routes/tracks.js';
 import uploadRoutes from './routes/uploads.js';
+import authRoutes from './routes/auth.js';
 import { registerRoomHandlers } from './sockets/roomHandlers.js';
 import { registerPlaylistHandlers } from './sockets/playlistHandlers.js';
 import { swaggerSpec } from './config/swagger.js';
+import { configurePassport } from './config/passport.js';
 
 // Load environment variables
 dotenv.config();
@@ -30,8 +34,31 @@ const io = new Server(httpServer, {
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
+  credentials: true, // Allow cookies for session management
+}));
 app.use(express.json());
+
+// Session configuration
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-this-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+      httpOnly: true, // Prevent XSS attacks
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    },
+  })
+);
+
+// Initialize Passport and configure strategies
+app.use(passport.initialize());
+app.use(passport.session());
+configurePassport();
 
 // Health check endpoint
 /**
@@ -65,6 +92,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Listener API Docs',
   customCss: '.swagger-ui .topbar { display: none }',
 }));
+
+// Authentication routes
+app.use('/auth', authRoutes);
 
 // API routes
 app.use('/api/rooms', createRoomsRouter(io));

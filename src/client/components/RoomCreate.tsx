@@ -5,12 +5,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createRoom } from '../services/api';
-
-// Temporary: Use first user from seed data until we have auth
-// TODO: Replace with actual authenticated user in Phase 2.3
-const TEMP_USER_ID = 'f1aaa777-5fd9-4eac-88a5-02c46db731fa'; // DJ Alpha from seed
+import { useAuth } from '../contexts/AuthContext';
 
 export default function RoomCreate() {
+  const { user } = useAuth();
   const [roomName, setRoomName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,10 +23,16 @@ export default function RoomCreate() {
     setError('');
     setLoading(true);
 
+    if (!user) {
+      setError('You must be logged in to create a room');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await createRoom({
         name: roomName.trim(),
-        ownerId: TEMP_USER_ID,
+        ownerId: user.id,
       });
 
       // Construct correct frontend URL instead of using backend URL

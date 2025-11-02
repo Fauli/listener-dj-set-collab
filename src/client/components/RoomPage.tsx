@@ -28,10 +28,7 @@ import TrackList from './TrackList';
 import AddTrackForm from './AddTrackForm';
 import DeckPlayer from './DeckPlayer';
 import Crossfader from './Crossfader';
-
-// Temporary hardcoded user ID (DJ Alpha from seed data)
-// TODO: Replace with actual auth when Phase 2 is implemented
-const TEMP_USER_ID = 'f1aaa777-5fd9-4eac-88a5-02c46db731fa'; // DJ Alpha
+import { useAuth } from '../contexts/AuthContext';
 
 interface User {
   id: string;
@@ -43,6 +40,7 @@ interface User {
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -87,14 +85,18 @@ export default function RoomPage() {
   };
 
   useEffect(() => {
-    if (!roomId) {
-      setError('No room ID provided');
+    if (!roomId || !user) {
+      if (!user) {
+        setError('User not authenticated');
+      } else {
+        setError('No room ID provided');
+      }
       setLoading(false);
       return;
     }
 
     // Join the room
-    joinRoom(roomId, TEMP_USER_ID);
+    joinRoom(roomId, user.id);
 
     // Listen for initial room state
     const unsubscribeState = onRoomState((data: RoomState) => {
@@ -176,7 +178,7 @@ export default function RoomPage() {
       resetDeck('A'); // Clear Deck A
       resetDeck('B'); // Clear Deck B
     };
-  }, [roomId, setTracks, addTrack, removeTrack, updateTrack, reorderTrack, reset, resetDeck]);
+  }, [roomId, user, setTracks, addTrack, removeTrack, updateTrack, reorderTrack, reset, resetDeck]);
 
   if (loading) {
     return (

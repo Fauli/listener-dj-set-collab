@@ -10,13 +10,20 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  role      String   // 'dj1', 'dj2', 'listener'
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  email      String?  @unique  // User's email from OAuth provider (nullable for legacy users)
+  name       String
+  avatarUrl  String?            // Profile picture URL from OAuth provider
+  role       String   @default("listener") // 'dj1', 'dj2', 'listener'
+  provider   String?            // OAuth provider: 'google', 'github', etc.
+  providerId String?            // OAuth provider's user ID
+  createdAt  DateTime @default(now())
 
   ownedRooms Room[]     @relation("RoomOwner")
   sessions   Session[]
+
+  @@unique([provider, providerId])
+  @@index([email])
 }
 
 model Room {
