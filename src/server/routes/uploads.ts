@@ -158,6 +158,9 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Room not found' });
     }
 
+    // Extract metadata BEFORE transcoding (so we get metadata from original AIFF file)
+    const metadata = await extractMetadata(req.file.path, req.file.originalname);
+
     // Transcode AIFF files to WAV for browser compatibility
     let finalFilePath = req.file.path;
     let finalFilename = req.file.filename;
@@ -168,7 +171,7 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
         const wavPath = await transcodeAiffToWav(req.file.path);
         finalFilePath = wavPath;
         finalFilename = path.basename(wavPath);
-        console.log(`Transcoding complete: ${finalFilename}`);
+        console.log(`Transcoding complete: ${finalFilename} (metadata preserved from original AIFF)`);
       } catch (transcodingError) {
         console.error('Transcoding failed:', transcodingError);
         // Clean up original file
@@ -179,9 +182,6 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
         });
       }
     }
-
-    // Extract metadata from the audio file
-    const metadata = await extractMetadata(finalFilePath, req.file.originalname);
 
     // Create track record with extracted metadata and file reference
     const track = await createTrack({
