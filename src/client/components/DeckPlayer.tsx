@@ -355,9 +355,9 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
             />
           </div>
 
-          {/* Controls - Single Row Compact */}
+          {/* Controls - Single Row with Better Organization */}
           <div className={`px-2 py-1.5 border-t ${borderColor}`}>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               {/* Transport Controls */}
               <div className="flex-shrink-0">
                 <TransportControls
@@ -372,7 +372,70 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                 />
               </div>
 
-              {/* Knobs - Compact */}
+              {/* Divider */}
+              <div className="h-8 w-px bg-gray-700/50" />
+
+              {/* Cue Points */}
+              <div className="flex-shrink-0">
+                <CuePoints
+                  cuePoints={deck.cuePoints}
+                  currentTime={deck.currentTime}
+                  onSetCue={handleSetCue}
+                  onJumpToCue={handleJumpToCue}
+                  onDeleteCue={handleDeleteCue}
+                />
+              </div>
+
+              {/* Divider */}
+              <div className="h-8 w-px bg-gray-700/50" />
+
+              {/* Beat Grid Controls */}
+              <div className="flex-shrink-0 flex items-center gap-1">
+                <BeatGridControl
+                  currentTime={deck.currentTime}
+                  firstBeatTime={deck.firstBeatTime}
+                  audioUrl={audioUrl}
+                  onSetBeatGrid={handleSetBeatGrid}
+                  onClearBeatGrid={handleClearBeatGrid}
+                  accentColor={accentColor}
+                />
+                {/* Beat Grid Nudge Buttons */}
+                {deck.firstBeatTime !== null && (
+                  <div className="flex items-center gap-0.5 ml-1">
+                    <button
+                      onClick={handleNudgeBeatGridLeft}
+                      className={`p-1 rounded text-xs font-medium transition-all ${
+                        accentColor === 'primary'
+                          ? 'bg-primary-600/20 hover:bg-primary-600/40 text-primary-300'
+                          : 'bg-purple-600/20 hover:bg-purple-600/40 text-purple-300'
+                      }`}
+                      title="Nudge beat grid earlier (10ms)"
+                    >
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleNudgeBeatGridRight}
+                      className={`p-1 rounded text-xs font-medium transition-all ${
+                        accentColor === 'primary'
+                          ? 'bg-primary-600/20 hover:bg-primary-600/40 text-primary-300'
+                          : 'bg-purple-600/20 hover:bg-purple-600/40 text-purple-300'
+                      }`}
+                      title="Nudge beat grid later (10ms)"
+                    >
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div className="h-8 w-px bg-gray-700/50" />
+
+              {/* Knobs Group */}
               <div className="flex items-start gap-1.5">
                 <Knob
                   label="Vol"
@@ -435,141 +498,91 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                 />
               </div>
 
-              {/* Sync Button - Icon Only */}
-              <button
-                onClick={handleSync}
-                disabled={!canSync}
-                className={`p-1.5 rounded text-xs font-medium transition-all flex items-center justify-center flex-shrink-0 ${
-                  isInSync
-                    ? 'bg-green-600 text-white'
-                    : canSync
-                    ? accentColor === 'primary'
-                      ? 'bg-primary-600 hover:bg-primary-700 text-white'
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'
-                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                }`}
-                title={
-                  !deck.track?.track.bpm || !otherDeck.track?.track.bpm
-                    ? 'Both decks need tracks with BPM'
-                    : isInSync
-                    ? 'Decks are in sync'
-                    : 'Sync BPM to other deck'
-                }
-              >
-                {isInSync ? (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
+              {/* Divider */}
+              <div className="h-8 w-px bg-gray-700/50" />
+
+              {/* Sync Buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleSync}
+                  disabled={!canSync}
+                  className={`p-1.5 rounded text-xs font-medium transition-all flex items-center justify-center flex-shrink-0 ${
+                    isInSync
+                      ? 'bg-green-600 text-white'
+                      : canSync
+                      ? accentColor === 'primary'
+                        ? 'bg-primary-600 hover:bg-primary-700 text-white'
+                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  }`}
+                  title={
+                    !deck.track?.track.bpm || !otherDeck.track?.track.bpm
+                      ? 'Both decks need tracks with BPM'
+                      : isInSync
+                      ? 'Decks are in sync'
+                      : 'Sync BPM to other deck'
+                  }
+                >
+                  {isInSync ? (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleSyncAndPlay}
+                  disabled={!canSyncAndPlay}
+                  className={`p-1.5 rounded text-xs font-medium transition-all flex items-center justify-center flex-shrink-0 ${
+                    canSyncAndPlay
+                      ? accentColor === 'primary'
+                        ? 'bg-primary-600 hover:bg-primary-700 text-white'
+                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  }`}
+                  title={
+                    !deck.track?.track.bpm || !otherDeck.track?.track.bpm
+                      ? 'Both decks need tracks with BPM'
+                      : deck.firstBeatTime === null || otherDeck.firstBeatTime === null
+                      ? 'Both decks need beat grids set'
+                      : !otherDeck.isPlaying
+                      ? 'Other deck must be playing'
+                      : deck.isPlaying
+                      ? 'This deck is already playing'
+                      : 'Sync BPM, align beats, and play'
+                  }
+                >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9"
+                      opacity="0.6"
                     />
                   </svg>
-                )}
-              </button>
-
-              {/* Sync Play Button - Beat-aligned playback */}
-              <button
-                onClick={handleSyncAndPlay}
-                disabled={!canSyncAndPlay}
-                className={`p-1.5 rounded text-xs font-medium transition-all flex items-center justify-center flex-shrink-0 ${
-                  canSyncAndPlay
-                    ? accentColor === 'primary'
-                      ? 'bg-primary-600 hover:bg-primary-700 text-white'
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'
-                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                }`}
-                title={
-                  !deck.track?.track.bpm || !otherDeck.track?.track.bpm
-                    ? 'Both decks need tracks with BPM'
-                    : deck.firstBeatTime === null || otherDeck.firstBeatTime === null
-                    ? 'Both decks need beat grids set'
-                    : !otherDeck.isPlaying
-                    ? 'Other deck must be playing'
-                    : deck.isPlaying
-                    ? 'This deck is already playing'
-                    : 'Sync BPM, align beats, and play'
-                }
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9"
-                    opacity="0.6"
-                  />
-                </svg>
-              </button>
-
-              {/* Beat Grid - Compact */}
-              <div className="flex-shrink-0 flex items-center gap-1">
-                <BeatGridControl
-                  currentTime={deck.currentTime}
-                  firstBeatTime={deck.firstBeatTime}
-                  audioUrl={audioUrl}
-                  onSetBeatGrid={handleSetBeatGrid}
-                  onClearBeatGrid={handleClearBeatGrid}
-                  accentColor={accentColor}
-                />
-                {/* Beat Grid Nudge Buttons */}
-                {deck.firstBeatTime !== null && (
-                  <div className="flex items-center gap-0.5 ml-1">
-                    <button
-                      onClick={handleNudgeBeatGridLeft}
-                      className={`p-1 rounded text-xs font-medium transition-all ${
-                        accentColor === 'primary'
-                          ? 'bg-primary-600/20 hover:bg-primary-600/40 text-primary-300'
-                          : 'bg-purple-600/20 hover:bg-purple-600/40 text-purple-300'
-                      }`}
-                      title="Nudge beat grid earlier (10ms)"
-                    >
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={handleNudgeBeatGridRight}
-                      className={`p-1 rounded text-xs font-medium transition-all ${
-                        accentColor === 'primary'
-                          ? 'bg-primary-600/20 hover:bg-primary-600/40 text-primary-300'
-                          : 'bg-purple-600/20 hover:bg-purple-600/40 text-purple-300'
-                      }`}
-                      title="Nudge beat grid later (10ms)"
-                    >
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Cue Points */}
-              <div className="flex-shrink-0">
-                <CuePoints
-                  cuePoints={deck.cuePoints}
-                  currentTime={deck.currentTime}
-                  onSetCue={handleSetCue}
-                  onJumpToCue={handleJumpToCue}
-                  onDeleteCue={handleDeleteCue}
-                />
+                </button>
               </div>
             </div>
           </div>

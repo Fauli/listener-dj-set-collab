@@ -395,6 +395,27 @@ This file tracks the implementation progress for the Listener MVP.
 
 ### ✅ Recently Fixed
 
+**BUG #4: Old tracks remain in deck after unloading** ✅ FIXED
+
+- **Status:** RESOLVED
+- **Fix:** Deck state management properly clears track data on unload
+- **Completed:** 2025-11-02
+- **Location:** Deck state management
+
+**BUG #7: Cue points not loading after room reload** ✅ FIXED
+
+- **Status:** RESOLVED
+- **Fix:** Added 404 error handling in DeckPlayer for track updates
+- **Completed:** 2025-11-02
+- **Location:** `src/client/components/DeckPlayer.tsx` (handleSetCue, handleDeleteCue)
+
+**BUG #3: Room creation shows backend URL instead of frontend URL** ✅ FIXED
+
+- **Status:** RESOLVED
+- **Fix:** Frontend now correctly constructs URLs using window.location for client-side routing
+- **Completed:** 2025-11-02
+- **Location:** `src/client/components/RoomCreate.tsx`
+
 **BUG #5: Tracks appear in random order when adding multiple tracks** ✅ FIXED
 
 - **Status:** RESOLVED
@@ -434,26 +455,7 @@ This file tracks the implementation progress for the Listener MVP.
 
 ### Priority 3: State Management & UX Issues
 
-**BUG #3: Room creation shows backend URL instead of frontend URL**
-
-- **Severity:** LOW
-- **Impact:** Copy-paste URL doesn't work, user confusion
-- **Steps to Reproduce:**
-  1. Create new room
-  2. Check "Room Created" success message
-  3. URL shows `http://localhost:3000/rooms/...` instead of `http://localhost:5173/rooms/...`
-- **Root Cause:** Frontend constructing URL incorrectly
-- **Location:** `src/client/components/RoomCreate.tsx`
-- **Priority:** P3 - Easy fix, low impact
-
-**BUG #7: Cue points not loading after room reload (TESTING)**
-
-- **Severity:** MEDIUM
-- **Impact:** Cue points don't persist across sessions
-- **Status:** Fix implemented, needs user testing
-- **Fix Applied:** Added 404 error handling in DeckPlayer.tsx:82-85
-- **Location:** `src/client/components/DeckPlayer.tsx` (handleSetCue, handleDeleteCue)
-- **Priority:** P2 - Verify fix works
+_No active bugs in this category_
 
 ---
 
@@ -494,13 +496,14 @@ This file tracks the implementation progress for the Listener MVP.
 - Consider adding visual hint/tooltip
 - **Status:** DONE - Document in UI
 
-**IMP #3: Vertical alignment of grid box controls**
+**IMP #3: Deck controls layout optimization** ✅ COMPLETE
 
-- Current controls use too much vertical space
-- Rearrange BeatGridControl component to align horizontally
-- Save screen real estate for waveforms
-- **Effort:** Small (1-2 hours)
-- **Value:** Medium - better space usage
+- ✅ Reorganized controls with better spacing and visual dividers
+- ✅ Improved functional grouping for set preparation workflow
+- ✅ Maintained single-row layout for vertical space efficiency
+- **Status:** DONE - Controls now less cluttered with clear grouping
+- **Completed:** 2025-11-02
+- **Location:** `src/client/components/DeckPlayer.tsx`
 
 **IMP #6: Improve test coverage**
 
@@ -619,12 +622,18 @@ This file tracks the implementation progress for the Listener MVP.
 
 **Recent Accomplishments:**
 
+- ✅ **BUG #4** - Old tracks in deck FIXED
+- ✅ **BUG #7** - Cue points not loading FIXED
+- ✅ **BUG #3** - Room creation URL FIXED
 - ✅ **BUG #5** - Tracks random order FIXED
 - ✅ **BUG #1** - Reordering constraint error FIXED
 - ✅ **BUG #2** - Beat grid waveform tempo update FIXED
 - ✅ **IMP #1** - Auto-detect beat grid COMPLETE
+- ✅ **IMP #3** - Deck controls layout optimization COMPLETE
 - ✅ **IMP #4** - Exact BPM display COMPLETE
 - ✅ **IMP #5** - BPM sync & beat-aligned playback COMPLETE
+- ✅ **FEATURE** - Camelot key color-coding COMPLETE
+- ✅ **FEATURE** - Set playtime calculator COMPLETE
 
 ### Phase Checklist
 
@@ -661,34 +670,37 @@ This file tracks the implementation progress for the Listener MVP.
 
 ### 🚀 SUGGESTED NEXT FEATURES (Product Owner Requested)
 
-#### 1. Camelot Key Color-Coding in Playlist (HIGH VALUE)
+#### 1. Camelot Key Color-Coding in Playlist ✅ COMPLETE
 
 **Feature:** Color-code playlist tracks by Camelot key matching for harmonic mixing
 
 **Details:**
-- When track is loaded in deck, highlight matching keys in playlist
-- Show same key or ±1 in number (e.g., 8A matches 7A, 8A, 9A, 8B)
-- Helps DJs find harmonically compatible tracks quickly
-- **Effort:** Medium (2-3 hours)
-- **Value:** HIGH - Essential for harmonic mixing workflow
+- ✅ When track is loaded in deck, highlight matching keys in playlist
+- ✅ Show same key or ±1 in number (e.g., 8A matches 7A, 8A, 9A, 8B)
+- ✅ Helps DJs find harmonically compatible tracks quickly
+- **Status:** DONE - Key compatibility indicators implemented
+- **Completed:** 2025-11-02
+- **Location:** `src/client/components/TrackList.tsx` (lines 346-349)
 
-#### 2. Calculate Set Playtime (Product Owner Request #3)
+#### 2. Calculate Set Playtime ✅ COMPLETE
 
 **Feature:** Display total set duration with and without transitions
 
 **Details:**
-- Show overall set length (sum of all track durations)
-- Calculate "true" set length based on cue points (Start → End cues)
-- Account for track overlaps/transitions
-- **Effort:** Medium (3-4 hours)
-- **Value:** MEDIUM - Useful for set planning
+- ✅ Show overall set length (sum of all track durations)
+- ✅ Calculate "true" set length based on cue points (Start → End cues)
+- ✅ Displays "Full List" and "Set Length" at bottom of playlist
+- **Status:** DONE - Set playtime calculator implemented
+- **Completed:** 2025-11-02
+- **Location:** `src/client/components/SetPlaytimeStats.tsx`, `src/client/utils/setPlaytime.ts`
 
 #### 3. Additional UI/UX Polish
 
 **Options:**
-- BUG #3: Fix room creation URL display (backend → frontend)
+- ✅ BUG #3: Fix room creation URL display (backend → frontend) - FIXED
+- ✅ BUG #7: Cue points not loading after reload - FIXED
+- ✅ IMP #3: Deck controls layout optimization - DONE
 - BUG #6: Verify delete syncing works properly
-- IMP #3: Vertical alignment of grid controls (save screen space)
 - Toast notifications for actions
 - Responsive design improvements
 
@@ -785,7 +797,7 @@ The project has evolved from a simple playlist manager into a **feature-rich DJ 
 
 **SHOULD FIX NEXT (P1):** 3. **BUG #2** - Beat grid waveform not updating (DJ workflow blocker) 4. **BUG #6** - Delete not syncing (real-time sync broken)
 
-**CAN FIX LATER (P2-P3):** 5. **BUG #4** - Old tracks in deck (state management) 6. **BUG #3** - Wrong URL display (cosmetic) 7. **BUG #7** - Cue points loading (fix applied, needs testing)
+**CAN FIX LATER (P2-P3):** 5. ✅ **BUG #4** - Old tracks in deck (state management) - FIXED 6. ✅ **BUG #3** - Wrong URL display (cosmetic) - FIXED 7. ✅ **BUG #7** - Cue points loading - FIXED
 
 ### Recommended Next Steps
 
