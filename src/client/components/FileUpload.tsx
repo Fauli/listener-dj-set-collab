@@ -3,6 +3,7 @@
  */
 
 import { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import { API_URL } from '../config/api.js';
 
 export interface UploadedFile {
   file: File;
@@ -153,7 +154,7 @@ export default function FileUpload({ roomId, onUploadComplete, onFilesSelected }
         );
       });
 
-      xhr.open('POST', 'http://localhost:3000/api/upload');
+      xhr.open('POST', `${API_URL}/upload`);
       xhr.send(formData);
     } catch (error) {
       setFiles((prev) =>

@@ -2,7 +2,9 @@
  * API service for backend communication
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api';
+import { API_URL } from '../config/api.js';
+
+const API_BASE = API_URL;
 
 interface CreateRoomRequest {
   name: string;

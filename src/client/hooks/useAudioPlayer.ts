@@ -6,6 +6,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Howl } from 'howler';
 import { useDeckStore } from '../stores/deckStore';
+import { API_URL } from '../config/api.js';
 import type { PlaylistTrack } from '../stores/playlistStore';
 
 export function useAudioPlayer(deckId: 'A' | 'B') {
@@ -71,7 +72,7 @@ export function useAudioPlayer(deckId: 'A' | 'B') {
       setError(deckId, null);
 
       // Create audio URL from track
-      const audioUrl = `http://localhost:3000/api/upload/${track.track.id}/audio`;
+      const audioUrl = `${API_URL}/upload/${track.track.id}/audio`;
       console.log(`[Deck ${deckId}] Loading audio from:`, audioUrl);
 
       // Detect format from sourceURI if available

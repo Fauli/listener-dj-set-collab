@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useDeckStore } from '../stores/deckStore';
+import { API_URL } from '../config/api.js';
 import type { PlaylistTrack } from '../stores/playlistStore';
 import type { CuePoints as CuePointsType } from '../stores/deckStore';
 import { quantizeToNearestBeat, calculateAlignedPosition } from '../utils/beatGrid';
@@ -220,7 +221,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
     otherDeck.isPlaying &&
     !deck.isPlaying;
 
-  const audioUrl = deck.track ? `http://localhost:3000/api/upload/${deck.track.track.id}/audio` : null;
+  const audioUrl = deck.track ? `${API_URL}/upload/${deck.track.track.id}/audio` : null;
 
   return (
     <>

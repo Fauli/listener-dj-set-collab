@@ -3,6 +3,7 @@
  */
 
 import { io, Socket } from 'socket.io-client';
+import { SOCKET_URL } from '../config/api.js';
 import type {
   RoomState,
   UserJoinedData,
@@ -13,8 +14,6 @@ import type {
   TrackReorderedData,
   Track,
 } from '../../shared/types/index.js';
-
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 
 let socket: Socket | null = null;
 
