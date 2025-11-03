@@ -39,6 +39,9 @@ const io = new Server(httpServer, {
 
 const PORT = process.env.PORT || 3000;
 
+// Trust first proxy (Nginx) - required for secure cookies behind reverse proxy
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
