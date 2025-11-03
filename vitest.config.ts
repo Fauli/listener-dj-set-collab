@@ -6,6 +6,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
+    // Run test files sequentially to avoid database race conditions in integration tests
+    fileParallelism: false,
     exclude: [
       '**/node_modules/**',
       '**/dist/**',

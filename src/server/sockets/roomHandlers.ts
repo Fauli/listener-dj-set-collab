@@ -4,7 +4,7 @@
 
 import { Server, Socket } from 'socket.io';
 import { getRoomById } from '../models/Room.js';
-import { createSession, getActiveSessions, endSession } from '../models/Session.js';
+import { createSession, getActiveSessions, endSession, getSessionBySocketId } from '../models/Session.js';
 
 interface JoinRoomData {
   roomId: string;
@@ -89,27 +89,27 @@ export async function handleJoinRoom(io: Server, socket: Socket, data: JoinRoomD
  */
 export async function handleDisconnect(io: Server, socket: Socket) {
   try {
-    // Find and end the session
-    const session = await endSession(socket.id);
+    // Get session data BEFORE ending it (so we have the roomId)
+    const session = await getSessionBySocketId(socket.id);
 
-    if (session.count > 0) {
-      // We don't have the room/user info here anymore, but we can get it from socket rooms
-      const rooms = Array.from(socket.rooms).filter((room) => room !== socket.id);
+    if (session) {
+      const roomId = session.roomId;
 
-      for (const roomId of rooms) {
-        // Get remaining active sessions to broadcast updated user list
-        const activeSessions = await getActiveSessions(roomId);
+      // Now end the session
+      await endSession(socket.id);
 
-        // Notify others that user left
-        io.to(roomId).emit('user:left', {
-          users: activeSessions.map((s) => ({
-            id: s.user.id,
-            name: s.user.name,
-            role: s.user.role,
-            joinedAt: s.joinedAt,
-          })),
-        });
-      }
+      // Get remaining active sessions to broadcast updated user list
+      const activeSessions = await getActiveSessions(roomId);
+
+      // Notify others that user left
+      io.to(roomId).emit('user:left', {
+        users: activeSessions.map((s) => ({
+          id: s.user.id,
+          name: s.user.name,
+          role: s.user.role,
+          joinedAt: s.joinedAt,
+        })),
+      });
 
       // eslint-disable-next-line no-console
       console.log(`Socket ${socket.id} disconnected and session ended`);

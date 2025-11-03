@@ -229,85 +229,84 @@ describe('WebSocket Room Operations', () => {
   });
 
   describe('user:joined broadcast', () => {
-    // TODO: Fix multi-client broadcast timing issues (Phase 2/3)
-    // These tests timeout due to complex async coordination between multiple WebSocket clients
-    // The functionality works in manual testing, but needs better test orchestration
-    it.skip('should broadcast user:joined to other users in room', async () => {
-      await new Promise<void>((resolve, reject) => {
-        let client1Ready = false;
+    it('should broadcast user:joined to other users in room', async () => {
+      // Wait for both sockets to connect
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          if (clientSocket.connected) resolve();
+          else clientSocket.once('connect', () => resolve());
+        }),
+        new Promise<void>((resolve) => {
+          if (clientSocket2.connected) resolve();
+          else clientSocket2.once('connect', () => resolve());
+        }),
+      ]);
 
-        // Client 1 joins first
-        clientSocket.on('connect', () => {
-          clientSocket.emit('room:join', {
-            roomId: testRoomId,
-            userId: testUserId,
-          });
-
-          clientSocket.once('room:state', () => {
-            client1Ready = true;
-
-            // Listen for user:joined event
-            clientSocket.once('user:joined', (data) => {
-              try {
-                expect(data.user).toBeDefined();
-                expect(data.user.id).toBe(testUser2Id);
-                expect(data.user.name).toBe(testUser2Name);
-                expect(data.joinedAt).toBeDefined();
-                resolve();
-              } catch (error) {
-                reject(error);
-              }
-            });
-
-            // Now client 2 joins
-            clientSocket2.on('connect', () => {
-              clientSocket2.emit('room:join', {
-                roomId: testRoomId,
-                userId: testUser2Id,
-              });
-            });
-          });
-
-          clientSocket.once('error', reject);
-        });
+      // Client 1 joins first
+      const roomStatePromise = waitForEvent(clientSocket, 'room:state');
+      clientSocket.emit('room:join', {
+        roomId: testRoomId,
+        userId: testUserId,
       });
+      await roomStatePromise;
+
+      // Set up listener for user:joined BEFORE client 2 joins
+      const userJoinedPromise = waitForEvent(clientSocket, 'user:joined', 2000);
+
+      // Small delay to ensure listener is registered
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Client 2 joins
+      clientSocket2.emit('room:join', {
+        roomId: testRoomId,
+        userId: testUser2Id,
+      });
+
+      // Wait for and verify user:joined event
+      const joinedData = await userJoinedPromise;
+      expect(joinedData.user).toBeDefined();
+      expect(joinedData.user.id).toBe(testUser2Id);
+      expect(joinedData.user.name).toBe(testUser2Name);
+      expect(joinedData.joinedAt).toBeDefined();
     });
 
-    // TODO: Fix multi-client broadcast timing issues (Phase 2/3)
-    it.skip('should show both users in room:state when second user joins', async () => {
-      await new Promise<void>((resolve, reject) => {
-        // Client 1 joins first
-        clientSocket.on('connect', () => {
-          clientSocket.emit('room:join', {
-            roomId: testRoomId,
-            userId: testUserId,
-          });
+    it('should show both users in room:state when second user joins', async () => {
+      // Wait for both sockets to connect
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          if (clientSocket.connected) resolve();
+          else clientSocket.once('connect', () => resolve());
+        }),
+        new Promise<void>((resolve) => {
+          if (clientSocket2.connected) resolve();
+          else clientSocket2.once('connect', () => resolve());
+        }),
+      ]);
 
-          clientSocket.once('room:state', () => {
-            // Client 2 joins
-            clientSocket2.on('connect', () => {
-              clientSocket2.emit('room:join', {
-                roomId: testRoomId,
-                userId: testUser2Id,
-              });
-
-              clientSocket2.once('room:state', (data) => {
-                try {
-                  expect(data.users).toHaveLength(2);
-                  const userIds = data.users.map((u: { id: string }) => u.id);
-                  expect(userIds).toContain(testUserId);
-                  expect(userIds).toContain(testUser2Id);
-                  resolve();
-                } catch (error) {
-                  reject(error);
-                }
-              });
-            });
-          });
-
-          clientSocket.once('error', reject);
-        });
+      // Client 1 joins first
+      const roomState1Promise = waitForEvent(clientSocket, 'room:state');
+      clientSocket.emit('room:join', {
+        roomId: testRoomId,
+        userId: testUserId,
       });
+      await roomState1Promise;
+
+      // Small delay to ensure server state is updated
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Client 2 joins
+      const roomState2Promise = waitForEvent<any>(clientSocket2, 'room:state');
+      clientSocket2.emit('room:join', {
+        roomId: testRoomId,
+        userId: testUser2Id,
+      });
+
+      // Verify client 2 sees both users
+      const data = await roomState2Promise;
+      expect(data.users).toHaveLength(2);
+      const userIds = data.users.map((u: { id: string }) => u.id);
+      expect(userIds).toContain(testUserId);
+      expect(userIds).toContain(testUser2Id);
     });
   });
 
@@ -358,46 +357,52 @@ describe('WebSocket Room Operations', () => {
       });
     });
 
-    // TODO: Fix multi-client broadcast timing issues (Phase 2/3)
-    it.skip('should broadcast user:left to remaining users on disconnect', async () => {
-      await new Promise<void>((resolve, reject) => {
-        // Client 1 joins
-        clientSocket.on('connect', () => {
-          clientSocket.emit('room:join', {
-            roomId: testRoomId,
-            userId: testUserId,
-          });
+    it('should broadcast user:left to remaining users on disconnect', async () => {
+      // Wait for both sockets to connect
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          if (clientSocket.connected) resolve();
+          else clientSocket.once('connect', () => resolve());
+        }),
+        new Promise<void>((resolve) => {
+          if (clientSocket2.connected) resolve();
+          else clientSocket2.once('connect', () => resolve());
+        }),
+      ]);
 
-          clientSocket.once('room:state', () => {
-            // Client 2 joins
-            clientSocket2.on('connect', () => {
-              clientSocket2.emit('room:join', {
-                roomId: testRoomId,
-                userId: testUser2Id,
-              });
-
-              clientSocket2.once('room:state', () => {
-                // Client 1 listens for user:left
-                clientSocket.once('user:left', (data) => {
-                  try {
-                    expect(data.users).toBeDefined();
-                    expect(data.users).toHaveLength(1);
-                    expect(data.users[0].id).toBe(testUserId);
-                    resolve();
-                  } catch (error) {
-                    reject(error);
-                  }
-                });
-
-                // Client 2 disconnects
-                clientSocket2.disconnect();
-              });
-            });
-          });
-
-          clientSocket.once('error', reject);
-        });
+      // Client 1 joins
+      const roomState1Promise = waitForEvent(clientSocket, 'room:state');
+      clientSocket.emit('room:join', {
+        roomId: testRoomId,
+        userId: testUserId,
       });
+      await roomState1Promise;
+
+      // Small delay to ensure server state is updated
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Client 2 joins
+      const roomState2Promise = waitForEvent(clientSocket2, 'room:state');
+      clientSocket2.emit('room:join', {
+        roomId: testRoomId,
+        userId: testUser2Id,
+      });
+      await roomState2Promise;
+
+      // Small delay to ensure both are fully joined
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Set up listener for user:left BEFORE disconnecting
+      const userLeftPromise = waitForEvent<any>(clientSocket, 'user:left', 2000);
+
+      // Client 2 disconnects
+      clientSocket2.disconnect();
+
+      // Wait for and verify user:left event
+      const leftData = await userLeftPromise;
+      expect(leftData.users).toBeDefined();
+      expect(leftData.users).toHaveLength(1);
+      expect(leftData.users[0].id).toBe(testUserId);
     });
 
     it('should handle disconnect when user not in any room', async () => {
