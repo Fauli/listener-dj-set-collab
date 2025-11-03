@@ -88,10 +88,42 @@ export async function deleteRoom(roomId: string) {
 }
 
 /**
- * Get all rooms (for future admin/listing features)
+ * Get all rooms (admin only)
  */
 export async function getAllRooms(limit = 50) {
   const rooms = await prisma.room.findMany({
+    take: limit,
+    orderBy: {
+      createdAt: 'desc',
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+        },
+      },
+      _count: {
+        select: {
+          setEntries: true,
+          sessions: true,
+        },
+      },
+    },
+  });
+
+  return rooms;
+}
+
+/**
+ * Get rooms owned by a specific user
+ */
+export async function getRoomsByOwnerId(ownerId: string, limit = 50) {
+  const rooms = await prisma.room.findMany({
+    where: {
+      ownerId,
+    },
     take: limit,
     orderBy: {
       createdAt: 'desc',

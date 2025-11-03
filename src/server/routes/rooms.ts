@@ -6,8 +6,9 @@ import express, { Request, Response } from 'express';
 import { Server } from 'socket.io';
 import { ZodError } from 'zod';
 import { createRoomSchema, roomIdSchema } from '../validators/roomSchemas.js';
-import { createRoom, getRoomById, deleteRoom, getAllRooms } from '../models/Room.js';
+import { createRoom, getRoomById, deleteRoom, getAllRooms, getRoomsByOwnerId } from '../models/Room.js';
 import { updateSetEntry, getSetEntryById } from '../models/SetEntry.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 // Factory function to create router with io instance
 export function createRoomsRouter(io: Server) {
@@ -285,11 +286,74 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
 /**
  * @swagger
+ * /api/rooms/mine:
+ *   get:
+ *     summary: Get my rooms
+ *     description: Retrieves a list of rooms owned by the authenticated user
+ *     tags: [Rooms]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Maximum number of rooms to return
+ *         example: 20
+ *     responses:
+ *       200:
+ *         description: List of user's rooms
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 rooms:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Room'
+ *                 count:
+ *                   type: integer
+ *                   description: Number of rooms returned
+ *                   example: 3
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/mine', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
+    const rooms = await getRoomsByOwnerId(user.id, limit);
+
+    res.json({ rooms, count: rooms.length });
+  } catch (error) {
+    // TODO: Replace with structured logger (Winston/Pino) before production
+    console.error('Error fetching user rooms:', error);
+    res.status(500).json({
+      error: 'Failed to fetch rooms',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * @swagger
  * /api/rooms:
  *   get:
- *     summary: List all rooms
- *     description: Retrieves a list of all rooms with optional limit
+ *     summary: List all rooms (Admin only)
+ *     description: Retrieves a list of all rooms with optional limit. Requires admin authentication.
  *     tags: [Rooms]
+ *     security:
+ *       - cookieAuth: []
  *     parameters:
  *       - in: query
  *         name: limit
@@ -316,6 +380,10 @@ router.delete('/:id', async (req: Request, res: Response) => {
  *                   type: integer
  *                   description: Number of rooms returned
  *                   example: 5
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Admin access required
  *       500:
  *         description: Server error
  *         content:
@@ -323,7 +391,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', requireAdmin, async (req: Request, res: Response) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
     const rooms = await getAllRooms(limit);

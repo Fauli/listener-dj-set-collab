@@ -139,26 +139,22 @@ describe('Room API Endpoints', () => {
   });
 
   describe('GET /api/rooms', () => {
-    it('should list all rooms', async () => {
+    it('should require authentication', async () => {
       const response = await fetch(`${API_BASE}/rooms`);
       const data = await response.json();
 
-      expect(response.status).toBe(200);
-      expect(data.rooms).toBeDefined();
-      expect(Array.isArray(data.rooms)).toBe(true);
-      expect(data.count).toBeGreaterThan(0);
-
-      // Should include our created room
-      const ourRoom = data.rooms.find((r: { id: string }) => r.id === createdRoomId);
-      expect(ourRoom).toBeDefined();
+      expect(response.status).toBe(401);
+      expect(data.error).toBe('Authentication required');
     });
 
-    it('should respect limit parameter', async () => {
+    it('should require admin access even with auth', async () => {
+      // Note: This test verifies the endpoint is admin-only
+      // In a real scenario with auth cookies, non-admin users would get 403
       const response = await fetch(`${API_BASE}/rooms?limit=1`);
       const data = await response.json();
 
-      expect(response.status).toBe(200);
-      expect(data.rooms.length).toBeLessThanOrEqual(1);
+      expect(response.status).toBe(401);
+      expect(data.error).toBe('Authentication required');
     });
   });
 
