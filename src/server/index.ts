@@ -56,7 +56,7 @@ app.use(
       secure: process.env.NODE_ENV === 'production', // HTTPS only in production
       httpOnly: true, // Prevent XSS attacks
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      sameSite: 'lax', // Use 'lax' to allow OAuth redirects from external providers
     },
   })
 );
