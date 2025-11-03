@@ -14,17 +14,21 @@ import { prisma } from '../db/client.js';
 export function configurePassport() {
   // Serialize user to session
   passport.serializeUser((user: any, done) => {
+    console.log('🔐 Serializing user to session:', user.id);
     done(null, user.id);
   });
 
   // Deserialize user from session
   passport.deserializeUser(async (id: string, done) => {
+    console.log('🔓 Deserializing user from session:', id);
     try {
       const user = await prisma.user.findUnique({
         where: { id },
       });
+      console.log('✅ User found:', user?.email);
       done(null, user);
     } catch (error) {
+      console.error('❌ Error deserializing user:', error);
       done(error, null);
     }
   });
@@ -120,6 +124,7 @@ export function configurePassport() {
           scope: ['user:email'], // Request email access
         },
         async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+          console.log('🔑 GitHub OAuth callback triggered for user:', profile.username);
           try {
             // Extract user info from GitHub profile
             const email = profile.emails?.[0]?.value;
@@ -127,7 +132,10 @@ export function configurePassport() {
             const avatarUrl = profile.photos?.[0]?.value;
             const providerId = profile.id;
 
+            console.log('📧 GitHub profile email:', email);
+
             if (!email) {
+              console.error('❌ No email found in GitHub profile');
               return done(new Error('No email found in GitHub profile'), undefined);
             }
 
@@ -138,6 +146,8 @@ export function configurePassport() {
                 providerId: providerId,
               },
             });
+
+            console.log('🔍 Existing user lookup:', user ? `Found: ${user.email}` : 'Not found, will create');
 
             if (!user) {
               // Check if user with this email already exists
@@ -179,8 +189,10 @@ export function configurePassport() {
               });
             }
 
+            console.log('✅ GitHub OAuth successful, returning user:', user.email);
             return done(null, user);
           } catch (error) {
+            console.error('❌ Error in GitHub OAuth callback:', error);
             return done(error as Error, undefined);
           }
         }

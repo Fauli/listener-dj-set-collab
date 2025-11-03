@@ -61,6 +61,10 @@ router.get(
  */
 router.get(
   '/github',
+  (req, res, next) => {
+    console.log('🚀 Initiating GitHub OAuth login');
+    next();
+  },
   passport.authenticate('github', {
     scope: ['user:email'],
   })
@@ -79,11 +83,17 @@ router.get(
  */
 router.get(
   '/github/callback',
+  (req, res, next) => {
+    console.log('🔙 GitHub callback received');
+    next();
+  },
   passport.authenticate('github', {
     failureRedirect: process.env.CLIENT_URL || 'http://localhost:5173',
   }),
   (req: Request, res: Response) => {
     // Successful authentication, redirect to client
+    console.log('✅ GitHub authentication successful, redirecting to client');
+    console.log('👤 Authenticated user:', (req.user as any)?.email);
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
     res.redirect(clientUrl);
   }
@@ -118,6 +128,10 @@ router.get(
  *         description: Not authenticated
  */
 router.get('/me', (req: Request, res: Response) => {
+  console.log('🔍 /auth/me called, isAuthenticated:', req.isAuthenticated());
+  console.log('🍪 Session ID:', req.sessionID);
+  console.log('👤 User in session:', req.user ? (req.user as any).email : 'none');
+
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
