@@ -4,7 +4,9 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-const API_URL = 'http://localhost:3000';
+// Use environment variable if provided, otherwise use current origin in production or localhost in development
+const API_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? window.location.origin : 'http://localhost:3000');
 
 interface User {
   id: string;
