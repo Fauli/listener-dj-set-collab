@@ -332,8 +332,8 @@ module.exports = {
   apps: [{
     name: 'listener',
     script: './dist/server/server/index.js',
-    instances: 'max',
-    exec_mode: 'cluster',
+    instances: 1,
+    exec_mode: 'fork',
     env: {
       NODE_ENV: 'production'
     },
