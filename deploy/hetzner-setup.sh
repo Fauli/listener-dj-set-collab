@@ -180,6 +180,7 @@ echo ""
 echo "📁 Setting up application directory..."
 APP_DIR="/home/listener/app"
 mkdir -p $APP_DIR
+chown -R listener:listener $APP_DIR
 cd $APP_DIR
 
 # Clone repository
@@ -195,6 +196,22 @@ fi
 # Create production .env file
 echo ""
 echo "📝 Creating production environment file..."
+
+# Preserve existing JWT_SECRET if .env already exists
+EXISTING_JWT_SECRET=""
+if [ -f "$APP_DIR/.env" ]; then
+  EXISTING_JWT_SECRET=$(grep "^JWT_SECRET=" "$APP_DIR/.env" | cut -d'=' -f2)
+fi
+
+# Use existing JWT_SECRET or generate new one
+if [ -z "$EXISTING_JWT_SECRET" ]; then
+  JWT_SECRET_VALUE=$(openssl rand -base64 32)
+  echo "Generating new JWT_SECRET"
+else
+  JWT_SECRET_VALUE="$EXISTING_JWT_SECRET"
+  echo "Preserving existing JWT_SECRET"
+fi
+
 cat > $APP_DIR/.env <<EOF
 # Production Configuration
 NODE_ENV=production
@@ -204,7 +221,7 @@ PORT=3000
 DATABASE_URL=postgresql://listener:$DB_PASSWORD@localhost:5432/listener
 
 # Authentication
-JWT_SECRET=$(openssl rand -base64 32)
+JWT_SECRET=$JWT_SECRET_VALUE
 JWT_EXPIRES_IN=7d
 
 # Session (for OAuth)
@@ -276,8 +293,19 @@ chown listener:listener $APP_DIR/logs
 # Start application with PM2
 echo ""
 echo "🚀 Starting application..."
-sudo -u listener pm2 start $APP_DIR/ecosystem.config.js
+
+# Check if app is already running in PM2
+if sudo -u listener pm2 describe listener > /dev/null 2>&1; then
+  echo "App is already running, restarting..."
+  sudo -u listener pm2 restart listener
+else
+  echo "Starting app for the first time..."
+  sudo -u listener pm2 start $APP_DIR/ecosystem.config.js
+fi
+
 sudo -u listener pm2 save
+
+# Setup PM2 startup script (idempotent - safe to run multiple times)
 pm2 startup systemd -u listener --hp /home/listener
 
 # Configure Nginx
@@ -366,7 +394,14 @@ systemctl reload nginx
 echo ""
 echo "🔒 Obtaining SSL certificate..."
 mkdir -p /var/www/certbot
-certbot --nginx -d $DOMAIN --email $SSL_EMAIL --agree-tos --non-interactive --redirect
+
+# Only run certbot if certificate doesn't exist
+if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+  echo "Obtaining new SSL certificate..."
+  certbot --nginx -d $DOMAIN --email $SSL_EMAIL --agree-tos --non-interactive --redirect
+else
+  echo "SSL certificate already exists, skipping..."
+fi
 
 # Setup automatic certificate renewal
 echo ""
