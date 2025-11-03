@@ -248,26 +248,90 @@ chmod 600 $APP_DIR/.env
 # Install dependencies
 echo ""
 echo "📦 Installing application dependencies..."
-sudo -u listener npm install
+if ! sudo -u listener npm install; then
+  echo "❌ npm install failed"
+  exit 1
+fi
+
+# Generate Prisma Client (required before build)
+echo ""
+echo "🗄️  Generating Prisma Client..."
+sudo -u listener npx prisma generate
 
 # Build application
 echo ""
 echo "🔨 Building application..."
-sudo -u listener npm run build
+echo "Running TypeScript compilation..."
+if ! sudo -u listener npm run build:server; then
+  echo "❌ Server build failed - TypeScript compilation errors"
+  echo "Check the errors above and fix TypeScript issues in src/server/"
+  exit 1
+fi
+
+echo ""
+echo "Running client build..."
+if ! sudo -u listener npm run build:client; then
+  echo "❌ Client build failed"
+  exit 1
+fi
+
+echo "✅ Both builds completed"
+
+# Verify build succeeded
+if [ ! -d "$APP_DIR/dist" ]; then
+  echo "❌ Build failed: dist directory not created"
+  echo "Check build logs above for errors"
+  exit 1
+fi
+
+echo "📋 Checking build output..."
+echo "Contents of dist/:"
+ls -la "$APP_DIR/dist/"
+
+if [ -d "$APP_DIR/dist/server" ]; then
+  echo ""
+  echo "Contents of dist/server/:"
+  ls -laR "$APP_DIR/dist/server/" | head -50
+else
+  echo "❌ dist/server/ directory not found"
+  exit 1
+fi
+
+if [ ! -f "$APP_DIR/dist/server/server/index.js" ]; then
+  echo ""
+  echo "❌ Build failed: dist/server/server/index.js not found"
+  echo ""
+  echo "Searching for index.js in dist/:"
+  find "$APP_DIR/dist" -name "index.js" -type f 2>/dev/null || echo "No index.js found"
+  echo ""
+  echo "This usually means TypeScript compilation failed."
+  echo "Check for TypeScript errors in the build output above."
+  exit 1
+fi
+
+echo ""
+echo "✅ Build successful - dist/server/server/index.js found"
 
 # Run database migrations
 echo ""
 echo "🗄️  Running database migrations..."
-sudo -u listener npx prisma migrate deploy
+if [ -d "$APP_DIR/prisma/migrations" ] && [ "$(ls -A $APP_DIR/prisma/migrations)" ]; then
+  sudo -u listener npx prisma migrate deploy
+else
+  echo "⚠️  No migrations found in prisma/migrations directory"
+  echo "This might be expected for a fresh database"
+  echo "Pushing schema to database instead..."
+  sudo -u listener npx prisma db push --accept-data-loss
+fi
 
 # Configure PM2
 echo ""
 echo "🚀 Configuring PM2..."
-cat > $APP_DIR/ecosystem.config.js <<'EOF'
+cat > $APP_DIR/ecosystem.config.cjs <<'EOF'
 module.exports = {
   apps: [{
     name: 'listener',
-    script: './dist/server/index.js',
+    script: './dist/server/server/index.js',
     instances: 'max',
     exec_mode: 'cluster',
     env: {
@@ -284,7 +348,7 @@ module.exports = {
 };
 EOF
 
-chown listener:listener $APP_DIR/ecosystem.config.js
+chown listener:listener $APP_DIR/ecosystem.config.cjs
 
 # Create logs directory
 mkdir -p $APP_DIR/logs
@@ -300,7 +364,7 @@ if sudo -u listener pm2 describe listener > /dev/null 2>&1; then
   sudo -u listener pm2 restart listener
 else
   echo "Starting app for the first time..."
-  sudo -u listener pm2 start $APP_DIR/ecosystem.config.js
+  sudo -u listener pm2 start $APP_DIR/ecosystem.config.cjs
 fi
 
 sudo -u listener pm2 save
@@ -311,37 +375,28 @@ pm2 startup systemd -u listener --hp /home/listener
 # Configure Nginx
 echo ""
 echo "🌐 Configuring Nginx..."
+
+# Check if SSL certificate already exists
+if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+  echo "SSL certificate found - configuring HTTPS"
+  HAS_SSL=true
+else
+  echo "No SSL certificate - configuring HTTP only (will be upgraded by certbot)"
+  HAS_SSL=false
+fi
+
+# Create initial HTTP-only configuration
 cat > /etc/nginx/sites-available/listener <<EOF
-# HTTP - redirect to HTTPS
+# HTTP server
 server {
     listen 80;
     listen [::]:80;
     server_name $DOMAIN;
 
+    # Let's Encrypt challenge directory
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
-
-    location / {
-        return 301 https://\$server_name\$request_uri;
-    }
-}
-
-# HTTPS
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name $DOMAIN;
-
-    # SSL configuration (will be updated by certbot)
-    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
-
-    # Security headers
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
 
     # Client max body size (for file uploads)
     client_max_body_size 100M;
@@ -385,22 +440,34 @@ ln -sf /etc/nginx/sites-available/listener /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 
 # Test Nginx configuration
-nginx -t
+echo "Testing Nginx configuration..."
+if ! nginx -t; then
+  echo "❌ Nginx configuration test failed"
+  exit 1
+fi
 
 # Reload Nginx
+echo "Reloading Nginx..."
 systemctl reload nginx
 
 # Obtain SSL certificate
 echo ""
-echo "🔒 Obtaining SSL certificate..."
+echo "🔒 Setting up SSL certificate..."
 mkdir -p /var/www/certbot
 
 # Only run certbot if certificate doesn't exist
-if [ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
-  echo "Obtaining new SSL certificate..."
-  certbot --nginx -d $DOMAIN --email $SSL_EMAIL --agree-tos --non-interactive --redirect
+if [ "$HAS_SSL" = false ]; then
+  echo "Obtaining SSL certificate with certbot..."
+  echo "This will automatically update Nginx config to add HTTPS"
+  if certbot --nginx -d $DOMAIN --email $SSL_EMAIL --agree-tos --non-interactive --redirect; then
+    echo "✅ SSL certificate obtained and Nginx configured for HTTPS"
+  else
+    echo "❌ Failed to obtain SSL certificate"
+    echo "The application is still accessible via HTTP at: http://$DOMAIN"
+    echo "You can manually obtain SSL later with: certbot --nginx -d $DOMAIN"
+  fi
 else
-  echo "SSL certificate already exists, skipping..."
+  echo "SSL certificate already exists, skipping certbot"
 fi
 
 # Setup automatic certificate renewal

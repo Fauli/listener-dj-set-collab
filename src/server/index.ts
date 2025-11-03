@@ -10,6 +10,8 @@ import dotenv from 'dotenv';
 import session from 'express-session';
 import passport from 'passport';
 import swaggerUi from 'swagger-ui-express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { createRoomsRouter } from './routes/rooms.js';
 import trackRoutes from './routes/tracks.js';
 import uploadRoutes from './routes/uploads.js';
@@ -18,6 +20,10 @@ import { registerRoomHandlers } from './sockets/roomHandlers.js';
 import { registerPlaylistHandlers } from './sockets/playlistHandlers.js';
 import { swaggerSpec } from './config/swagger.js';
 import { configurePassport } from './config/passport.js';
+
+// Get __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config();
@@ -110,6 +116,23 @@ io.on('connection', (socket) => {
   registerRoomHandlers(io, socket);
   registerPlaylistHandlers(io, socket);
 });
+
+// Serve static files from the client build in production
+if (process.env.NODE_ENV === 'production') {
+  // Path to the built client files
+  const clientBuildPath = path.join(__dirname, '../../client');
+
+  // eslint-disable-next-line no-console
+  console.log(`Serving static files from: ${clientBuildPath}`);
+
+  // Serve static assets
+  app.use(express.static(clientBuildPath));
+
+  // Handle React Router - send all non-API requests to index.html
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+}
 
 // Start server
 httpServer.listen(PORT, () => {
