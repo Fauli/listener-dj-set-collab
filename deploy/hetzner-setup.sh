@@ -459,15 +459,78 @@ mkdir -p /var/www/certbot
 if [ "$HAS_SSL" = false ]; then
   echo "Obtaining SSL certificate with certbot..."
   echo "This will automatically update Nginx config to add HTTPS"
-  if certbot --nginx -d $DOMAIN --email $SSL_EMAIL --agree-tos --non-interactive --redirect; then
-    echo "✅ SSL certificate obtained and Nginx configured for HTTPS"
+
+  # Wait a moment for Nginx to be fully ready
+  sleep 2
+
+  # Run certbot with verbose output
+  if certbot --nginx -d $DOMAIN --email $SSL_EMAIL --agree-tos --non-interactive --redirect 2>&1 | tee /tmp/certbot-output.log; then
+    echo ""
+    echo "✅ SSL certificate obtained successfully"
+
+    # Verify certificate was actually created
+    if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+      echo "✅ Certificate files verified at /etc/letsencrypt/live/$DOMAIN/"
+
+      # Verify Nginx config was updated with SSL
+      if grep -q "ssl_certificate" /etc/nginx/sites-enabled/listener; then
+        echo "✅ Nginx configuration updated with SSL settings"
+      else
+        echo "⚠️  Warning: Nginx config may not have been updated by certbot"
+        echo "Run manually: sudo certbot --nginx -d $DOMAIN"
+      fi
+    else
+      echo "❌ Certificate files not found after certbot run"
+      echo "Check /tmp/certbot-output.log for details"
+    fi
   else
+    echo ""
     echo "❌ Failed to obtain SSL certificate"
-    echo "The application is still accessible via HTTP at: http://$DOMAIN"
-    echo "You can manually obtain SSL later with: certbot --nginx -d $DOMAIN"
+    echo "Common causes:"
+    echo "  - DNS not pointing to this server yet (check: dig +short $DOMAIN)"
+    echo "  - Firewall blocking port 80/443"
+    echo "  - Domain already has rate-limited certificate attempts"
+    echo ""
+    echo "The application is accessible via HTTP at: http://$DOMAIN"
+    echo "Once DNS is correct, run: sudo certbot --nginx -d $DOMAIN --email $SSL_EMAIL"
+    echo ""
+    echo "Certbot output saved to: /tmp/certbot-output.log"
   fi
 else
-  echo "SSL certificate already exists, skipping certbot"
+  echo "SSL certificate already exists"
+
+  # Verify Nginx is configured for SSL
+  if grep -q "ssl_certificate" /etc/nginx/sites-enabled/listener; then
+    echo "✅ Nginx already configured for HTTPS"
+  else
+    echo "⚠️  SSL certificate exists but Nginx not configured for HTTPS"
+    echo "Running certbot to update Nginx configuration..."
+    if certbot --nginx -d $DOMAIN --email $SSL_EMAIL --agree-tos --non-interactive --redirect; then
+      echo "✅ Nginx configuration updated for HTTPS"
+    else
+      echo "❌ Failed to update Nginx configuration"
+      echo "Run manually: sudo certbot --nginx -d $DOMAIN"
+    fi
+  fi
+fi
+
+# Final verification
+echo ""
+echo "🔍 Final SSL verification..."
+if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+  echo "✅ SSL certificate: PRESENT"
+
+  if grep -q "listen 443 ssl" /etc/nginx/sites-enabled/listener; then
+    echo "✅ Nginx HTTPS: CONFIGURED"
+    echo "✅ Your site should be accessible at: https://$DOMAIN"
+  else
+    echo "⚠️  Nginx HTTPS: NOT CONFIGURED"
+    echo "Certificate exists but Nginx config needs updating"
+    echo "Run: sudo certbot --nginx -d $DOMAIN"
+  fi
+else
+  echo "⚠️  SSL certificate: NOT PRESENT"
+  echo "Site accessible via HTTP: http://$DOMAIN"
 fi
 
 # Setup automatic certificate renewal
