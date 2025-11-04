@@ -96,19 +96,21 @@ function SortableTrackItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`px-6 py-2 hover:bg-gray-750 transition-colors group bg-gray-800 ${borderClass}`}
+      className={`px-3 sm:px-6 py-3 sm:py-2 hover:bg-gray-750 transition-colors group bg-gray-800 ${borderClass}`}
       data-track-item
+      role="listitem"
+      aria-label={`Track ${entry.position + 1}: ${entry.track.title} by ${entry.track.artist}`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-start sm:items-center gap-2 sm:gap-3">
         {/* Drag Handle */}
         <button
           {...attributes}
           {...listeners}
-          className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300 transition"
+          className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300 transition touch-manipulation p-1"
           aria-label="Drag to reorder"
         >
           <svg
-            className="w-5 h-5"
+            className="w-5 h-5 sm:w-5 sm:h-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -123,22 +125,22 @@ function SortableTrackItem({
         </button>
 
         {/* Position */}
-        <div className="flex-shrink-0 w-7 h-7 rounded bg-primary-600 flex items-center justify-center font-bold text-xs">
+        <div className="flex-shrink-0 w-8 h-8 sm:w-7 sm:h-7 rounded bg-primary-600 flex items-center justify-center font-bold text-xs">
           {entry.position + 1}
         </div>
 
         {/* Track Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2">
-            <h3 className="font-semibold text-base truncate">
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-0 sm:gap-2">
+            <h3 className="font-semibold text-sm sm:text-base truncate">
               {entry.track.title}
             </h3>
-            {/* Metadata inline with title */}
-            <div className="flex gap-2 text-xs text-gray-500 items-center">
+            {/* Metadata inline with title on desktop, below on mobile */}
+            <div className="flex flex-wrap gap-1 sm:gap-2 text-xs text-gray-500 items-center">
               {entry.track.bpm && <span>{entry.track.bpm} BPM</span>}
               {entry.track.key && (
                 <span className="flex items-center gap-1">
-                  • {entry.track.key}
+                  {entry.track.bpm && '•'} {entry.track.key}
                   {/* Compatibility indicators */}
                   {compatibleWithDeckA && (
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary-500" title="Compatible with Deck A"></span>
@@ -151,7 +153,7 @@ function SortableTrackItem({
               {entry.track.energy && <span>• E{entry.track.energy}</span>}
             </div>
           </div>
-          <p className="text-sm text-gray-400 truncate">{entry.track.artist}</p>
+          <p className="text-xs sm:text-sm text-gray-400 truncate">{entry.track.artist}</p>
 
           {/* Note Section */}
           {isEditingNote ? (
@@ -204,16 +206,17 @@ function SortableTrackItem({
         </div>
 
         {/* Actions */}
-        <div className="flex-shrink-0 flex items-center gap-2">
+        <div className="flex-shrink-0 flex items-center gap-1 sm:gap-2">
           {/* Load to Deck Buttons */}
           {onLoadToDeck && (
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onLoadToDeck('A', entry);
                 }}
-                className="px-2 py-1 rounded bg-primary-600/20 hover:bg-primary-600/40 text-primary-400 hover:text-primary-300 transition text-xs font-medium"
+                className="px-2 sm:px-2 py-1.5 sm:py-1 rounded bg-primary-600/20 hover:bg-primary-600/40 text-primary-400 hover:text-primary-300 transition text-xs font-medium touch-manipulation"
+                aria-label={`Load ${entry.track.title} to Deck A`}
                 title="Load to Deck A"
               >
                 ▶ A
@@ -223,7 +226,8 @@ function SortableTrackItem({
                   e.stopPropagation();
                   onLoadToDeck('B', entry);
                 }}
-                className="px-2 py-1 rounded bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 hover:text-purple-300 transition text-xs font-medium"
+                className="px-2 sm:px-2 py-1.5 sm:py-1 rounded bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 hover:text-purple-300 transition text-xs font-medium touch-manipulation"
+                aria-label={`Load ${entry.track.title} to Deck B`}
                 title="Load to Deck B"
               >
                 ▶ B
@@ -233,11 +237,12 @@ function SortableTrackItem({
 
           <button
             onClick={onRemove}
-            className="text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-900/20 transition"
+            className="text-red-400 hover:text-red-300 px-2 py-1.5 sm:py-1 rounded hover:bg-red-900/20 transition touch-manipulation"
+            aria-label={`Remove ${entry.track.title} from playlist`}
             title="Remove track"
           >
             <svg
-              className="w-4 h-4"
+              className="w-5 h-5 sm:w-4 sm:h-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -311,19 +316,35 @@ export default function TrackList({ roomId, onLoadToDeck }: TrackListProps) {
 
   if (tracks.length === 0) {
     return (
-      <div className="bg-gray-800 rounded-lg p-8 text-center">
-        <p className="text-gray-400 text-lg">No tracks in playlist yet</p>
-        <p className="text-gray-500 text-sm mt-2">
-          Add your first track to get started
+      <div className="bg-gray-800 rounded-lg p-12 text-center">
+        <svg
+          className="w-20 h-20 text-gray-600 mx-auto mb-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+          />
+        </svg>
+        <h3 className="text-xl font-semibold text-gray-300 mb-2">No Tracks Yet</h3>
+        <p className="text-gray-500 mb-4">
+          Upload your first track to start building your DJ set
+        </p>
+        <p className="text-sm text-gray-600">
+          Click "Upload Tracks" above to get started
         </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800 rounded-lg overflow-hidden">
+    <div className="bg-gray-800 rounded-lg overflow-hidden" role="region" aria-label="Playlist">
       <div className="px-6 py-4 border-b border-gray-700">
-        <h2 className="text-xl font-bold">
+        <h2 className="text-xl font-bold" id="playlist-heading">
           Playlist ({tracks.length} track{tracks.length !== 1 ? 's' : ''})
         </h2>
         <p className="text-sm text-gray-400 mt-1">
@@ -340,7 +361,7 @@ export default function TrackList({ roomId, onLoadToDeck }: TrackListProps) {
           items={tracks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="divide-y divide-gray-700">
+          <div className="divide-y divide-gray-700" role="list" aria-labelledby="playlist-heading">
             {tracks.map((entry) => {
               // Calculate key compatibility
               const compatibleWithDeckA = deckAKey ? areKeysCompatible(entry.track.key, deckAKey) : false;

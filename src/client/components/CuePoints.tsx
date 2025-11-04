@@ -11,6 +11,7 @@ interface CuePointsProps {
   onSetCue: (cueType: keyof CuePointsType) => void;
   onJumpToCue: (cueType: keyof CuePointsType) => void;
   onDeleteCue: (cueType: keyof CuePointsType) => void;
+  deckId: 'A' | 'B';
 }
 
 const CUE_CONFIG = {
@@ -20,6 +21,8 @@ const CUE_CONFIG = {
     hoverColor: 'hover:bg-green-700',
     textColor: 'text-green-600',
     borderColor: 'border-green-600',
+    keyA: '1',
+    keyB: 'Q',
   },
   end: {
     label: 'End',
@@ -27,20 +30,26 @@ const CUE_CONFIG = {
     hoverColor: 'hover:bg-red-700',
     textColor: 'text-red-600',
     borderColor: 'border-red-600',
+    keyA: '2',
+    keyB: 'W',
   },
-  A: {
+  a: {
     label: 'A',
     color: 'bg-blue-600',
     hoverColor: 'hover:bg-blue-700',
     textColor: 'text-blue-600',
     borderColor: 'border-blue-600',
+    keyA: '3',
+    keyB: 'E',
   },
-  B: {
+  b: {
     label: 'B',
     color: 'bg-purple-600',
     hoverColor: 'hover:bg-purple-700',
     textColor: 'text-purple-600',
     borderColor: 'border-purple-600',
+    keyA: '4',
+    keyB: 'R',
   },
 } as const;
 
@@ -56,6 +65,7 @@ export default function CuePoints({
   onSetCue,
   onJumpToCue,
   onDeleteCue,
+  deckId,
 }: CuePointsProps) {
   const handleCueClick = (cueType: keyof CuePointsType, e: React.MouseEvent) => {
     const cueTime = cuePoints[cueType];
@@ -92,6 +102,7 @@ export default function CuePoints({
         const config = CUE_CONFIG[cueType];
         const cueTime = cuePoints[cueType];
         const isSet = cueTime !== null;
+        const keyboardShortcut = deckId === 'A' ? config.keyA : config.keyB;
 
         return (
           <div key={cueType} className="relative group">
@@ -105,14 +116,18 @@ export default function CuePoints({
               }`}
               title={
                 isSet
-                  ? `Jump to ${config.label} cue (${formatTime(cueTime)})`
-                  : `Set ${config.label} cue at current position`
+                  ? `Jump to ${config.label} cue (${formatTime(cueTime)}) • Press ${keyboardShortcut}`
+                  : `Set ${config.label} cue at current position • Press Shift+${keyboardShortcut}`
               }
             >
               <div className="font-bold leading-none">{config.label}</div>
-              {isSet && (
+              {isSet ? (
                 <div className="text-[9px] leading-tight opacity-90 mt-0.5">
                   {formatTime(cueTime)}
+                </div>
+              ) : (
+                <div className="text-[9px] leading-tight opacity-70 mt-0.5">
+                  {keyboardShortcut}
                 </div>
               )}
             </button>

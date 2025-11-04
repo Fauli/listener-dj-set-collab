@@ -4,7 +4,9 @@ import { Toaster } from 'react-hot-toast';
 import RoomCreate from './components/RoomCreate';
 import RoomPage from './components/RoomPage';
 import LoginPage from './components/LoginPage';
+import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 /**
  * ProtectedRoute - Requires authentication to access
@@ -79,6 +81,9 @@ function HomePage() {
         <footer className="mt-12 text-center text-gray-500 text-sm">
           <p>Vibin&apos; with Fauli since 2025 🎧</p>
         </footer>
+
+        {/* Keyboard Shortcuts Help */}
+        <KeyboardShortcutsHelp />
       </div>
     </div>
   );
@@ -89,53 +94,55 @@ function HomePage() {
  */
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <div className="min-h-screen bg-gray-900 text-white">
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: '#1f2937',
-                color: '#f3f4f6',
-                border: '1px solid #374151',
-              },
-              success: {
-                iconTheme: {
-                  primary: '#10b981',
-                  secondary: '#1f2937',
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <div className="min-h-screen bg-gray-900 text-white">
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                style: {
+                  background: '#1f2937',
+                  color: '#f3f4f6',
+                  border: '1px solid #374151',
                 },
-              },
-              error: {
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#1f2937',
+                success: {
+                  iconTheme: {
+                    primary: '#10b981',
+                    secondary: '#1f2937',
+                  },
                 },
-              },
-            }}
-          />
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <HomePage />
-                </ProtectedRoute>
-              }
+                error: {
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: '#1f2937',
+                  },
+                },
+              }}
             />
-            <Route
-              path="/rooms/:roomId"
-              element={
-                <ProtectedRoute>
-                  <RoomPage />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </div>
-      </AuthProvider>
-    </BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <HomePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/rooms/:roomId"
+                element={
+                  <ProtectedRoute>
+                    <RoomPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </div>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

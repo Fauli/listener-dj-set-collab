@@ -223,6 +223,79 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
 
   const audioUrl = deck.track ? `${API_URL}/upload/${deck.track.track.id}/audio` : null;
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts if user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // Only process shortcuts if track is loaded
+      if (!deck.track) return;
+
+      // Deck A shortcuts (number keys)
+      if (deckId === 'A') {
+        // Space: Play/Pause
+        if (e.key === ' ' && !e.shiftKey) {
+          e.preventDefault();
+          if (deck.isPlaying) {
+            pause();
+          } else {
+            play();
+          }
+          return;
+        }
+
+        // Cue point keys
+        const cueKeyMap: Record<string, keyof CuePointsType> = {
+          '1': 'start',
+          '2': 'end',
+          '3': 'a',
+          '4': 'b',
+        };
+
+        const cueType = cueKeyMap[e.key];
+        if (cueType) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            // Shift + Number: Set cue point
+            handleSetCue(cueType);
+          } else {
+            // Number: Jump to cue point
+            handleJumpToCue(cueType);
+          }
+        }
+      }
+
+      // Deck B shortcuts (QWER keys)
+      if (deckId === 'B') {
+        const cueKeyMap: Record<string, keyof CuePointsType> = {
+          'q': 'start',
+          'w': 'end',
+          'e': 'a',
+          'r': 'b',
+        };
+
+        const cueType = cueKeyMap[e.key.toLowerCase()];
+        if (cueType) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            // Shift + Key: Set cue point
+            handleSetCue(cueType);
+          } else {
+            // Key: Jump to cue point
+            handleJumpToCue(cueType);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [deck.track, deck.isPlaying, deckId, play, pause, handleSetCue, handleJumpToCue]);
+
   return (
     <>
       <div className={`bg-gray-800 rounded-lg border-2 ${borderColor} ${bgColor} overflow-hidden flex flex-col h-full`}>
@@ -384,6 +457,7 @@ export default function DeckPlayer({ deckId, onLoadFunctionReady }: DeckPlayerPr
                   onSetCue={handleSetCue}
                   onJumpToCue={handleJumpToCue}
                   onDeleteCue={handleDeleteCue}
+                  deckId={deckId}
                 />
               </div>
 

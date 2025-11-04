@@ -29,6 +29,7 @@ import TrackList from './TrackList';
 import AddTrackForm from './AddTrackForm';
 import DeckPlayer from './DeckPlayer';
 import Crossfader from './Crossfader';
+import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
 import { useAuth } from '../contexts/AuthContext';
 
 interface User {
@@ -88,9 +89,9 @@ export default function RoomPage() {
   useEffect(() => {
     if (!roomId || !user) {
       if (!user) {
-        setError('User not authenticated');
+        setError('Please log in to access this room.');
       } else {
-        setError('No room ID provided');
+        setError('Invalid room link. Please check the URL and try again.');
       }
       setLoading(false);
       return;
@@ -199,8 +200,10 @@ export default function RoomPage() {
     return (
       <div className="max-w-2xl mx-auto p-8">
         <div className="bg-red-900/30 border border-red-600 rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-2 text-red-400">Error</h2>
-          <p className="text-gray-300 mb-4">{error || 'Failed to load room'}</p>
+          <h2 className="text-xl font-bold mb-2 text-red-400">Unable to Load Room</h2>
+          <p className="text-gray-300 mb-4">
+            {error || 'This room could not be loaded. It may have been deleted or you may not have permission to access it.'}
+          </p>
           <button
             onClick={() => navigate('/')}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
@@ -213,32 +216,32 @@ export default function RoomPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-8 relative">
-      {/* Logo - positioned absolutely to not take up space */}
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 relative">
+      {/* Logo - positioned absolutely to not take up space, hidden on mobile */}
       <img
         src="/listener-logo.png"
         alt="Listener"
-        className="absolute top-10 right-8 h-24 w-auto opacity-60"
+        className="hidden lg:block absolute top-10 right-8 h-24 w-auto opacity-60"
       />
 
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <div className="mb-4">
           <button
             onClick={() => navigate('/')}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 hover:text-white transition-colors text-sm sm:text-base"
           >
             ← Back to Home
           </button>
         </div>
-        <h1 className="text-3xl font-bold mb-2">{roomState.room.name}</h1>
-        <p className="text-gray-400">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">{roomState.room.name}</h1>
+        <p className="text-sm sm:text-base text-gray-400">
           Hosted by <span className="text-purple-400">{roomState.room.owner.name}</span>
         </p>
       </div>
 
       {/* Dual Deck Players - Stacked Vertically */}
-      <div className="mb-4 space-y-2">
+      <div className="mb-4 sm:mb-6 space-y-2">
         <DeckPlayer deckId="A" onLoadFunctionReady={onDeckALoadFunctionReady} />
 
         {/* Crossfader - between decks */}
@@ -247,33 +250,69 @@ export default function RoomPage() {
         <DeckPlayer deckId="B" onLoadFunctionReady={onDeckBLoadFunctionReady} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {/* Active Users Panel */}
         <div className="lg:col-span-1">
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-bold mb-4 flex items-center">
-              <span className="mr-2">👥</span>
+          <div className="bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-700" role="region" aria-label="Active users">
+            <h2 className="text-lg sm:text-xl font-bold mb-4 flex items-center" id="active-users-heading">
+              <span className="mr-2" aria-hidden="true">👥</span>
               Active Users
-              <span className="ml-auto bg-purple-600 text-xs px-2 py-1 rounded-full">
+              <span className="ml-auto bg-purple-600 text-xs px-2 py-1 rounded-full" aria-label={`${roomState.users.length} active users`}>
                 {roomState.users.length}
               </span>
             </h2>
             <div className="space-y-3">
               {roomState.users.length === 0 ? (
-                <p className="text-gray-500 text-sm">No one here yet...</p>
+                <div className="text-center py-8">
+                  <svg
+                    className="w-16 h-16 text-gray-600 mx-auto mb-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                  <h4 className="text-base font-semibold text-gray-300 mb-2">
+                    Waiting for Collaborators
+                  </h4>
+                  <p className="text-gray-500 text-sm mb-3">
+                    Share the room link to invite other DJs
+                  </p>
+                  <button
+                    onClick={() => {
+                      const link = window.location.href;
+                      navigator.clipboard.writeText(link);
+                      toast.success('Room link copied to clipboard!');
+                    }}
+                    className="text-primary-400 hover:text-primary-300 text-sm font-medium transition inline-flex items-center gap-1"
+                    aria-label="Copy room link to clipboard"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy Room Link
+                  </button>
+                </div>
               ) : (
-                roomState.users.map((user: User) => (
-                  <div key={user.id} className="flex items-center p-3 bg-gray-700/50 rounded-lg">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3 animate-pulse"></div>
-                    <div className="flex-1">
-                      <p className="font-medium">{user.name}</p>
-                      <p className="text-xs text-gray-400">{user.role}</p>
+                <div role="list" aria-labelledby="active-users-heading">
+                  {roomState.users.map((user: User) => (
+                    <div key={user.id} className="flex items-center p-3 bg-gray-700/50 rounded-lg" role="listitem">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-3 animate-pulse" aria-label="Online"></div>
+                      <div className="flex-1">
+                        <p className="font-medium">{user.name}</p>
+                        <p className="text-xs text-gray-400">{user.role}</p>
+                      </div>
+                      {user.id === roomState.room.owner.id && (
+                        <span className="text-xs bg-purple-600 px-2 py-1 rounded" aria-label="Room owner">Owner</span>
+                      )}
                     </div>
-                    {user.id === roomState.room.owner.id && (
-                      <span className="text-xs bg-purple-600 px-2 py-1 rounded">Owner</span>
-                    )}
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -290,6 +329,9 @@ export default function RoomPage() {
           </div>
         </div>
       </div>
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp />
     </div>
   );
 }

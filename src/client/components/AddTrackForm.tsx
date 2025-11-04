@@ -2,7 +2,7 @@
  * AddTrackForm component - Upload tracks to the playlist
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { addTrack } from '../services/socket';
 import { usePlaylistStore } from '../stores/playlistStore';
 import FileUpload, { UploadedFile } from './FileUpload';
@@ -14,6 +14,25 @@ interface AddTrackFormProps {
 export default function AddTrackForm({ roomId }: AddTrackFormProps) {
   const tracks = usePlaylistStore((state) => state.tracks);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Esc to close upload form
+      if (e.key === 'Escape' && isExpanded) {
+        setIsExpanded(false);
+      }
+
+      // Ctrl/Cmd+U to toggle upload form
+      if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+        e.preventDefault();
+        setIsExpanded((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isExpanded]);
 
   // Queue system to ensure tracks are added in selection order
   const [uploadQueue] = useState<{
@@ -100,6 +119,7 @@ export default function AddTrackForm({ roomId }: AddTrackFormProps) {
         <button
           onClick={() => setIsExpanded(true)}
           className="w-full bg-primary-600 hover:bg-primary-700 px-6 py-3 rounded font-medium transition flex items-center justify-center gap-2"
+          title="Upload tracks (Ctrl/Cmd+U)"
         >
           <svg
             className="w-5 h-5"
@@ -115,6 +135,9 @@ export default function AddTrackForm({ roomId }: AddTrackFormProps) {
             />
           </svg>
           Upload Tracks
+          <span className="text-xs text-primary-200 ml-2 hidden sm:inline">
+            (⌘U)
+          </span>
         </button>
       </div>
     );

@@ -37,6 +37,18 @@ export default function RoomCreate() {
   const [deleting, setDeleting] = useState(false);
   const [copiedRoomId, setCopiedRoomId] = useState<string | null>(null);
 
+  // Keyboard shortcut to close delete modal with Esc
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && deleteConfirm && !deleting) {
+        setDeleteConfirm(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [deleteConfirm, deleting]);
+
   // Fetch user's existing rooms on component mount
   useEffect(() => {
     const fetchRooms = async () => {
@@ -193,9 +205,9 @@ export default function RoomCreate() {
   // Form state
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="bg-gray-800 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4">Create a New Room</h2>
-        <p className="text-gray-400 mb-6">
+      <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4">Create a New Room</h2>
+        <p className="text-sm sm:text-base text-gray-400 mb-6">
           Start planning your DJ set with a collaborator in real-time.
         </p>
 
@@ -247,31 +259,33 @@ export default function RoomCreate() {
       </div>
 
       {/* Existing Rooms Section */}
-      {existingRooms.length > 0 && (
-        <div className="bg-gray-800 rounded-lg p-6 mt-6">
-          <h3 className="text-xl font-bold mb-4">Your Existing Rooms</h3>
-          <p className="text-gray-400 text-sm mb-4">
-            Click on a room to continue where you left off
-          </p>
+      <div className="bg-gray-800 rounded-lg p-4 sm:p-6 mt-6" role="region" aria-label="Your existing rooms">
+        <h3 className="text-lg sm:text-xl font-bold mb-4" id="existing-rooms-heading">Your Existing Rooms</h3>
 
-          {loadingRooms ? (
-            <div className="space-y-3">
-              <RoomSkeleton />
-              <RoomSkeleton />
-              <RoomSkeleton />
-            </div>
-          ) : (
-            <div className="space-y-3">
+        {loadingRooms ? (
+          <div className="space-y-3">
+            <RoomSkeleton />
+            <RoomSkeleton />
+            <RoomSkeleton />
+          </div>
+        ) : existingRooms.length > 0 ? (
+          <>
+            <p className="text-gray-400 text-sm mb-4">
+              Click on a room to continue where you left off
+            </p>
+            <div className="space-y-3" role="list" aria-labelledby="existing-rooms-heading">
               {existingRooms.map((room) => (
                 <div
                   key={room.id}
                   className="bg-gray-900 border border-gray-700 rounded-lg p-4"
+                  role="listitem"
                 >
                   <div className="flex items-start justify-between gap-4">
                     {/* Room Info - Clickable */}
                     <Link
                       to={`/rooms/${room.id}`}
                       className="flex-1 group"
+                      aria-label={`Open room ${room.name}`}
                     >
                       <h4 className="font-semibold text-gray-200 group-hover:text-primary-400 transition">
                         {room.name}
@@ -289,7 +303,8 @@ export default function RoomCreate() {
                           e.preventDefault();
                           handleCopyLink(room.id);
                         }}
-                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-sm font-medium transition flex items-center gap-2"
+                        className="px-2 sm:px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-xs sm:text-sm font-medium transition flex items-center gap-1 sm:gap-2 touch-manipulation"
+                        aria-label={`Copy link for ${room.name}`}
                         title="Copy room link"
                       >
                         {copiedRoomId === room.id ? (
@@ -297,14 +312,14 @@ export default function RoomCreate() {
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
-                            Copied!
+                            <span className="hidden sm:inline">Copied!</span>
                           </>
                         ) : (
                           <>
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
-                            Copy Link
+                            <span className="hidden sm:inline">Copy Link</span>
                           </>
                         )}
                       </button>
@@ -315,28 +330,50 @@ export default function RoomCreate() {
                           e.preventDefault();
                           setDeleteConfirm({ id: room.id, name: room.name });
                         }}
-                        className="px-3 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 hover:text-red-300 rounded text-sm font-medium transition flex items-center gap-2"
+                        className="px-2 sm:px-3 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 hover:text-red-300 rounded text-xs sm:text-sm font-medium transition flex items-center gap-1 sm:gap-2 touch-manipulation"
+                        aria-label={`Delete room ${room.name}`}
                         title="Delete room"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        Delete
+                        <span className="hidden sm:inline">Delete</span>
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      )}
+          </>
+        ) : (
+          // Empty state - no rooms yet
+          <div className="text-center py-12">
+            <svg
+              className="w-16 h-16 text-gray-600 mx-auto mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+              />
+            </svg>
+            <h4 className="text-lg font-semibold text-gray-300 mb-2">No Rooms Yet</h4>
+            <p className="text-gray-500 text-sm mb-4">
+              Create your first room above to start collaborating with other DJs
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title">
           <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
-            <h3 className="text-xl font-bold mb-2 text-red-400">Delete Room?</h3>
+            <h3 className="text-xl font-bold mb-2 text-red-400" id="delete-dialog-title">Delete Room?</h3>
             <p className="text-gray-300 mb-4">
               Are you sure you want to delete <span className="font-semibold">&quot;{deleteConfirm.name}&quot;</span>?
             </p>
@@ -349,13 +386,16 @@ export default function RoomCreate() {
                 onClick={() => setDeleteConfirm(null)}
                 disabled={deleting}
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded font-medium transition disabled:opacity-50"
+                aria-label="Cancel delete"
+                title="Cancel (Esc)"
               >
-                Cancel
+                Cancel <span className="text-xs text-gray-400 hidden sm:inline">(Esc)</span>
               </button>
               <button
                 onClick={handleDeleteRoom}
                 disabled={deleting}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-medium transition disabled:opacity-50 flex items-center gap-2"
+                aria-label={`Confirm delete room ${deleteConfirm.name}`}
               >
                 {deleting ? (
                   <>

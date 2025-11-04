@@ -42,7 +42,7 @@ export async function createRoom(data: CreateRoomRequest): Promise<CreateRoomRes
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to create room');
+    throw new Error(error.error || 'Unable to create room. Please try again.');
   }
 
   return response.json();
@@ -56,7 +56,7 @@ export async function getRoom(roomId: string): Promise<{ room: Room }> {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch room');
+    throw new Error(error.error || 'Unable to load room. The room may not exist or you may not have access.');
   }
 
   return response.json();
@@ -73,7 +73,7 @@ export async function listRooms(limit?: number): Promise<{ rooms: Room[]; count:
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch rooms');
+    throw new Error(error.error || 'Unable to load your rooms. Please try again.');
   }
 
   return response.json();
@@ -90,6 +90,6 @@ export async function deleteRoom(roomId: string): Promise<void> {
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to delete room');
+    throw new Error(error.error || 'Unable to delete room. You may not have permission or it may have already been deleted.');
   }
 }
