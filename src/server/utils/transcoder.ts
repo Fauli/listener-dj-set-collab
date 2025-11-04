@@ -7,6 +7,14 @@ import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
 import fs from 'fs/promises';
 
+// Configure FFmpeg path (Linux/macOS standard location)
+// This helps fluent-ffmpeg find ffmpeg even if it's not in PATH
+try {
+  ffmpeg.setFfmpegPath('/usr/bin/ffmpeg');
+} catch (error) {
+  console.warn('Could not set explicit ffmpeg path, using system PATH:', error);
+}
+
 /**
  * Transcodes an AIFF audio file to WAV format
  * @param inputPath - Path to the input AIFF file

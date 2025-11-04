@@ -8,15 +8,19 @@
 - ✅ Session tracking
 - ✅ Database operations
 - ✅ Cue points persistence
-- ✅ **SetEntry concurrency (20 tests)** 🆕
+- ✅ SetEntry concurrency (20 tests)
 
-**Frontend: ✅ 60 tests passing**
+**Frontend: ✅ 252 tests passing** 🆕
 - ✅ Camelot Key utilities (35 tests)
 - ✅ Beat Detection utilities (25 tests)
-- ❌ Component tests (0 tests)
-- ❌ State management tests (0 tests)
+- ✅ **Beat Grid utilities (55 tests)** 🆕
+- ✅ **Set Playtime calculator (26 tests)** 🆕
+- ✅ Playlist Store (39 tests)
+- ✅ Deck Store (62 tests)
+- ✅ **SetPlaytimeStats component (10 tests)** 🆕
+- ⚙️ Component testing infrastructure **SET UP**
 
-**Total: ✅ 141/141 tests passing** 🎉
+**Total: ✅ 333/333 tests passing** 🎉
 
 ---
 
@@ -100,123 +104,276 @@
 
 ---
 
-#### 3. Beat Grid Utilities (`src/client/utils/beatGrid.ts`)
+#### 3. ✅ Beat Grid Utilities (`src/client/utils/beatGrid.ts`) - COMPLETED
 
-**Why important**: Affects visual waveform alignment.
+**Status**: ✅ 55 tests passing
+**Location**: `tests/unit/beatGrid.test.ts`
 
-- [ ] Check if file exists and has complex logic
-- [ ] Add tests for boundary conditions
+- [x] **getBeatTime()** - Calculate time of specific beat
+  - [x] Basic calculations with 120 BPM
+  - [x] Playback rate adjustments (faster/slower)
+  - [x] Different BPM values (90, 160)
+  - [x] firstBeatTime at 0 and non-zero
 
-**Estimated effort**: 1-2 hours
+- [x] **getClosestBeat()** - Find closest beat to a time
+  - [x] Rounding behavior
+  - [x] Times before firstBeatTime (clamps to beat 1)
+  - [x] Far future times
+  - [x] Rate adjustments
+
+- [x] **quantizeToNearestBeat()** - Snap time to nearest beat
+  - [x] Exact beat times
+  - [x] Quantization in both directions
+  - [x] Different BPM values
+
+- [x] **getBeatsInRange()** - Get all beats in time range
+  - [x] Various ranges
+  - [x] Empty ranges
+  - [x] Long ranges with many beats
+  - [x] Rate adjustment effects
+
+- [x] **getCurrentBar()** - Get bar number (4/4 time)
+  - [x] Bars 1, 2, 3
+  - [x] Non-zero firstBeatTime
+
+- [x] **getBeatInBar()** - Get beat within bar (1-4)
+  - [x] All beats in first bar
+  - [x] Cycling through bars
+
+- [x] **getBeatPhase()** - Get beat number and phase (0-1)
+  - [x] Phase at exact beat time (0)
+  - [x] Phase halfway through beat (0.5)
+  - [x] Phase clamping to [0, 1]
+  - [x] Rate adjustments
+
+- [x] **calculateAlignedPosition()** - Beat-sync two tracks
+  - [x] Same BPM alignment
+  - [x] Different BPM alignment (120 → 130)
+  - [x] Phase alignment within beat
+  - [x] Different firstBeatTime
+  - [x] Never returns negative position
+  - [x] Rate differences between tracks
+
+- [x] **Edge Cases**
+  - [x] Very low BPM (60)
+  - [x] Very high BPM (180)
+  - [x] Large beat numbers (1000+)
+  - [x] Fractional seconds precision
+
+**Time spent**: ~2 hours
 
 ---
 
-#### 4. Set Playtime Calculator (`src/client/utils/setPlaytime.ts`)
+#### 4. ✅ Set Playtime Calculator (`src/client/utils/setPlaytime.ts`) - COMPLETED
 
-- [ ] Check if file exists
-- [ ] Test total playtime calculations
-- [ ] Test with missing/null BPM values
-- [ ] Test with empty playlist
+**Status**: ✅ 26 tests passing
+**Location**: `tests/unit/setPlaytime.test.ts`
 
-**Estimated effort**: 1 hour
+- [x] **calculateSetPlaytime()**
+  - [x] Empty playlist
+  - [x] Single and multiple tracks
+  - [x] Cue points (start/end) usage
+  - [x] Partial cue points (only start or only end)
+  - [x] Invalid cue points (end < start, zero duration)
+  - [x] Mix of tracks with and without cue points
+  - [x] Null/undefined durations
+  - [x] Negative durations (not validated)
+  - [x] Very small durations (< 1 second)
+
+- [x] **formatDuration()**
+  - [x] Short durations (< 1 hour)
+  - [x] Long sets (> 1 hour, > 10 hours)
+  - [x] Exact minutes and hours
+  - [x] Zero padding for single digits
+  - [x] Fractional seconds (floors to integer)
+  - [x] Negative duration handling (returns 00:00:00)
+
+- [x] **Realistic Scenarios**
+  - [x] Large playlists (50+ tracks)
+  - [x] Typical DJ set (10 tracks with mixed cues)
+  - [x] Different totals for cue-based vs full duration
+
+**Time spent**: ~1.5 hours
 
 ---
 
 ### 🟡 P1: State Management (Zustand Stores)
 
-#### 5. Playlist Store (`src/client/stores/playlistStore.ts`)
+#### 5. ✅ Playlist Store (`src/client/stores/playlistStore.ts`) - COMPLETED
 
-**Why important**: Central to collaborative editing. Position bugs = broken playlist.
+**Status**: ✅ 39 tests passing
+**Location**: `tests/unit/playlistStore.test.ts`
 
-- [ ] **addTrack()**
-  - [ ] Adds track and maintains sorted order
-  - [ ] Duplicate positions handled correctly
-  - [ ] Empty playlist → first track
+- [x] **Initial State**
+  - [x] Correct default values
 
-- [ ] **removeTrack()**
-  - [ ] Removes correct track
-  - [ ] Recalculates positions for remaining tracks
-  - [ ] Remove from empty playlist → no error
-  - [ ] Remove non-existent track → no error
+- [x] **setTracks()**
+  - [x] Sets tracks and sorts by position
+  - [x] Handles empty array
+  - [x] Clears previous error
 
-- [ ] **updateTrack()**
-  - [ ] Updates correct track
-  - [ ] Partial updates work (only note, only cuePoints)
-  - [ ] Update non-existent track → no error
+- [x] **addTrack()**
+  - [x] Adds single track
+  - [x] Adds multiple tracks in correct order
+  - [x] Maintains sort order when adding out of sequence
+  - [x] Clears error
 
-- [ ] **reorderTrack()**
-  - [ ] Move to beginning (position 0)
-  - [ ] Move to end (last position)
-  - [ ] Move to middle
-  - [ ] Invalid positions handled
-  - [ ] All other tracks maintain correct order
+- [x] **removeTrack()**
+  - [x] Removes track and reindexes positions
+  - [x] Removes first/last track correctly
+  - [x] Handles removing non-existent track
 
-- [ ] **Optimistic Updates**
-  - [ ] addPendingAction / removePendingAction work
-  - [ ] isPending returns correct state
-  - [ ] Pending actions don't block UI
+- [x] **updateTrack()**
+  - [x] Updates track note
+  - [x] Updates cue points
+  - [x] Updates multiple fields at once
+  - [x] Doesn't affect other tracks
 
-- [ ] **reset()**
-  - [ ] Clears all state including pending actions
+- [x] **reorderTrack()**
+  - [x] Move track down (position 0 → 2)
+  - [x] Move track up (position 3 → 1)
+  - [x] Move to first/last position
+  - [x] Handle same position (no-op)
+  - [x] Handle non-existent track
+  - [x] Ensures no position gaps
 
-**Estimated effort**: 3-4 hours
+- [x] **Optimistic Updates**
+  - [x] addPendingAction / removePendingAction work
+  - [x] isPending returns correct state
+  - [x] Handles multiple pending actions
+
+- [x] **Loading/Error State**
+  - [x] setLoading works
+  - [x] setError works
+
+- [x] **reset()**
+  - [x] Resets all state to initial values
+  - [x] Allows new state after reset
+
+**Time spent**: ~3 hours
 
 ---
 
-#### 6. Deck Store (`src/client/stores/deckStore.ts`)
+#### 6. ✅ Deck Store (`src/client/stores/deckStore.ts`) - COMPLETED
 
-- [ ] Check what state it manages
-- [ ] Test state transitions
-- [ ] Test deck synchronization logic
+**Status**: ✅ 62 tests passing
+**Location**: `tests/unit/deckStore.test.ts`
 
-**Estimated effort**: 2-3 hours
+- [x] **Initial State**
+  - [x] Both decks initialized correctly
+  - [x] Crossfader at center
+
+- [x] **loadTrack()**
+  - [x] Loads track to deck A/B
+  - [x] Loads cue points from track data
+  - [x] Loads track without cue points
+  - [x] Allows loading same track to both decks
+  - [x] Resets playback state when loading new track
+
+- [x] **unloadTrack()**
+  - [x] Unloads track from deck
+  - [x] Preserves volume when unloading
+  - [x] Doesn't affect other deck
+
+- [x] **Playback Controls**
+  - [x] setPlaying / setPaused state transitions
+  - [x] setCurrentTime / setDuration
+
+- [x] **Volume Control**
+  - [x] setVolume with clamping (0-1)
+
+- [x] **Loop Control**
+  - [x] toggleLoop on/off
+
+- [x] **Playback Rate**
+  - [x] setRate with clamping (0.92-1.08)
+
+- [x] **EQ Controls**
+  - [x] setEQLow/Mid/High with clamping (-12 to +12)
+
+- [x] **Loading/Error States**
+  - [x] setLoading / setError
+  - [x] Error clears loading state
+
+- [x] **Beat Grid**
+  - [x] setFirstBeatTime
+
+- [x] **Cue Points**
+  - [x] setCuePoint for all 4 types (start, end, A, B)
+  - [x] Update individual cue point without affecting others
+  - [x] Clear cue point by setting to null
+
+- [x] **Reset**
+  - [x] Resets deck to initial state
+  - [x] Preserves volume
+  - [x] Doesn't affect other deck
+
+- [x] **Crossfader**
+  - [x] setCrossfaderPosition with clamping (-1 to 1)
+  - [x] getCrossfaderVolume calculations at various positions
+
+- [x] **Independent Deck Operations**
+  - [x] Independent playback on both decks
+  - [x] Independent volume control
+  - [x] Independent EQ settings
+  - [x] Independent cue points
+
+**Time spent**: ~3 hours
 
 ---
 
 ### 🟢 P2: React Components
 
-#### 7. Component Testing Setup
+#### 7. ✅ Component Testing Setup - COMPLETED
 
-**Prerequisites**: Install testing libraries first
-```bash
-npm install -D @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
-```
+**Status**: ✅ Infrastructure ready
+**Files created**:
+- `tests/utils/componentTestUtils.tsx` - Test utilities with providers
+- Updated `vitest.config.ts` - React plugin + environmentMatchGlobs for jsdom
+- Updated `tests/setup.ts` - Added @testing-library/jest-dom
 
-**Vitest config**: Add to `vitest.config.ts`:
-```typescript
-test: {
-  environment: 'jsdom',
-  setupFiles: ['./tests/setupTests.ts'],
-}
-```
+**Dependencies installed**:
+- ✅ @testing-library/react
+- ✅ @testing-library/jest-dom
+- ✅ @testing-library/user-event
+- ✅ jsdom
 
-**Estimated effort**: 1 hour setup
+**Configuration**:
+- Uses `environmentMatchGlobs` to apply jsdom only to component tests
+- Backend tests continue to use node environment
+- All existing tests still passing
+
+**Time spent**: ~1 hour
 
 ---
 
-#### 8. Critical Components to Test
+#### 8. Component Tests - ⚙️ IN PROGRESS
 
-- [ ] **TrackList.tsx** - Playlist rendering
-  - [ ] Renders empty state
-  - [ ] Renders tracks in correct order
-  - [ ] Drag-and-drop reordering
-  - [ ] Click handlers work
+**Completed:**
 
-- [ ] **AddTrackForm.tsx** - Track input
-  - [ ] Form validation
-  - [ ] Submit with valid data
-  - [ ] Error handling
+**SetPlaytimeStats.tsx** - ✅ 10 tests passing
+**Location**: `tests/components/SetPlaytimeStats.component.test.tsx`
 
+- [x] Renders nothing when tracks array is empty
+- [x] Renders playtime stats for single/multiple tracks
+- [x] Shows different durations for cue-based vs full
+- [x] Has correct title attributes for tooltips
+- [x] Formats long sets correctly (> 1 hour)
+- [x] Applies correct CSS classes
+- [x] Displays separator bullet
+- [x] Updates when tracks prop changes
+- [x] Handles tracks with same full and cue-based duration
+
+**Time spent**: ~1 hour
+
+**Remaining (Not Implemented):**
+
+- [ ] **TrackList.tsx** - Playlist rendering (complex - drag & drop)
+- [ ] **AddTrackForm.tsx** - Track upload (complex - file upload, queue)
 - [ ] **CuePoints.tsx** - Cue point editor
-  - [ ] Displays cue points
-  - [ ] Updates on change
-  - [ ] Validates time values
-
 - [ ] **LoginPage.tsx** - Auth flow
-  - [ ] Renders login options
-  - [ ] Handles OAuth redirect
 
-**Estimated effort**: 6-8 hours for all components
+**Estimated effort**: 5-7 hours for remaining components
 
 ---
 
@@ -395,26 +552,30 @@ test: {
 
 ## Implementation Order (Recommended)
 
-### Phase 1: Frontend Core Logic (Week 1)
+### Phase 1: Frontend Core Logic (Week 1) - ✅ COMPLETED
 1. ✅ Camelot Key tests (P0) - 2-3 hrs
 2. ✅ Beat Detection tests (P0) - 4-5 hrs
 3. ✅ Playlist Store tests (P1) - 3-4 hrs
 
-**Total: ~10-12 hours**
+**Status: ✅ 100% complete (99 tests)**
 
-### Phase 2: Backend Edge Cases (Week 2)
+### Phase 2: Backend Edge Cases (Week 2) - ✅ COMPLETED
 4. ✅ SetEntry concurrency tests (P0) - 3-4 hrs
 5. ✅ WebSocket lifecycle tests (P1) - 4-5 hrs
 6. ✅ Upload edge cases (P1) - 3 hrs
 
-**Total: ~10-12 hours**
+**Status: ✅ 100% complete (81 tests)**
 
-### Phase 3: Component Tests (Week 3)
+### Phase 3: Component Tests (Week 3) - ✅ MOSTLY COMPLETE
 7. ✅ Setup component testing - 1 hr
-8. ✅ Critical component tests (P2) - 6-8 hrs
-9. ✅ Deck Store tests (P1) - 2-3 hrs
+8. ✅ Beat Grid utilities (P0) - 2 hrs (55 tests)
+9. ✅ Set Playtime utilities (P0) - 1.5 hrs (26 tests)
+10. ✅ Deck Store tests (P1) - 3 hrs (62 tests)
+11. ✅ SetPlaytimeStats component (P2) - 1 hr (10 tests)
+12. ❌ Complex component tests - 0/4 components (TrackList, AddTrackForm, CuePoints, LoginPage)
 
-**Total: ~10-12 hours**
+**Status: ✅ 85% complete (153 new tests added)**
+**Remaining**: Complex component tests with drag-drop, file upload, auth flows (5-7 hours estimated)
 
 ### Phase 4: Polish & Reliability (Week 4)
 10. ✅ Database integrity tests (P2) - 2 hrs

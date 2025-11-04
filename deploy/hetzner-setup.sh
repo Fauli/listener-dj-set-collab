@@ -146,7 +146,7 @@ apt-get install -y postgresql-17
 # Install other dependencies
 echo ""
 echo "📦 Installing additional packages..."
-apt-get install -y git nginx certbot python3-certbot-nginx ufw
+apt-get install -y git nginx certbot python3-certbot-nginx ufw ffmpeg
 
 # Install PM2 globally
 echo ""

@@ -4,6 +4,7 @@
  */
 
 import { beforeAll, afterAll, beforeEach } from 'vitest';
+import '@testing-library/jest-dom';
 
 beforeAll(() => {
   // Global setup (e.g., start test database)
