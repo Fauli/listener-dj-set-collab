@@ -7,6 +7,7 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import { prisma } from '../db/client.js';
+import { logDebug, logError, logWarn } from '../middleware/logger.js';
 
 /**
  * Configure Google OAuth 2.0 strategy
@@ -14,21 +15,25 @@ import { prisma } from '../db/client.js';
 export function configurePassport() {
   // Serialize user to session
   passport.serializeUser((user: any, done) => {
-    console.log('🔐 Serializing user to session:', user.id);
+    logDebug('Serializing user to session', { userId: user.id });
     done(null, user.id);
   });
 
   // Deserialize user from session
   passport.deserializeUser(async (id: string, done) => {
-    console.log('🔓 Deserializing user from session:', id);
+    logDebug('Deserializing user from session', { userId: id });
     try {
       const user = await prisma.user.findUnique({
         where: { id },
       });
-      console.log('✅ User found:', user?.email);
+      if (user) {
+        logDebug('User found in session');
+      } else {
+        logWarn('User not found during deserialization', { userId: id });
+      }
       done(null, user);
     } catch (error) {
-      console.error('❌ Error deserializing user:', error);
+      logError('Error deserializing user', error);
       done(error, null);
     }
   });
@@ -110,7 +115,7 @@ export function configurePassport() {
       )
     );
   } else {
-    console.warn('⚠️  Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env');
+    logWarn('Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env');
   }
 
   // GitHub OAuth Strategy
@@ -124,7 +129,7 @@ export function configurePassport() {
           scope: ['user:email'], // Request email access
         },
         async (accessToken: string, refreshToken: string, profile: any, done: any) => {
-          console.log('🔑 GitHub OAuth callback triggered for user:', profile.username);
+          logDebug('GitHub OAuth callback triggered', { username: profile.username });
           try {
             // Extract user info from GitHub profile
             const email = profile.emails?.[0]?.value;
@@ -132,10 +137,8 @@ export function configurePassport() {
             const avatarUrl = profile.photos?.[0]?.value;
             const providerId = profile.id;
 
-            console.log('📧 GitHub profile email:', email);
-
             if (!email) {
-              console.error('❌ No email found in GitHub profile');
+              logError('No email found in GitHub profile');
               return done(new Error('No email found in GitHub profile'), undefined);
             }
 
@@ -147,7 +150,7 @@ export function configurePassport() {
               },
             });
 
-            console.log('🔍 Existing user lookup:', user ? `Found: ${user.email}` : 'Not found, will create');
+            logDebug('GitHub user lookup', { userFound: !!user });
 
             if (!user) {
               // Check if user with this email already exists
@@ -189,16 +192,16 @@ export function configurePassport() {
               });
             }
 
-            console.log('✅ GitHub OAuth successful, returning user:', user.email);
+            logDebug('GitHub OAuth successful');
             return done(null, user);
           } catch (error) {
-            console.error('❌ Error in GitHub OAuth callback:', error);
+            logError('Error in GitHub OAuth callback', error);
             return done(error as Error, undefined);
           }
         }
       )
     );
   } else {
-    console.warn('⚠️  GitHub OAuth not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env');
+    logWarn('GitHub OAuth not configured. Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in .env');
   }
 }

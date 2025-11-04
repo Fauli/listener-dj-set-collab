@@ -63,11 +63,13 @@ export async function getRoom(roomId: string): Promise<{ room: Room }> {
 }
 
 /**
- * List all rooms
+ * List user's rooms (authenticated)
  */
 export async function listRooms(limit?: number): Promise<{ rooms: Room[]; count: number }> {
   const url = limit ? `${API_BASE}/rooms?limit=${limit}` : `${API_BASE}/rooms`;
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    credentials: 'include', // Send session cookie
+  });
 
   if (!response.ok) {
     const error = await response.json();
@@ -75,4 +77,19 @@ export async function listRooms(limit?: number): Promise<{ rooms: Room[]; count:
   }
 
   return response.json();
+}
+
+/**
+ * Delete a room
+ */
+export async function deleteRoom(roomId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/rooms/${roomId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to delete room');
+  }
 }

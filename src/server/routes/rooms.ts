@@ -9,6 +9,8 @@ import { createRoomSchema, roomIdSchema } from '../validators/roomSchemas.js';
 import { createRoom, getRoomById, deleteRoom, getAllRooms, getRoomsByOwnerId } from '../models/Room.js';
 import { updateSetEntry, getSetEntryById } from '../models/SetEntry.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { logInfo, logError } from '../middleware/logger.js';
+import { handleValidationError } from '../middleware/errorHandler.js';
 
 // Factory function to create router with io instance
 export function createRoomsRouter(io: Server) {
@@ -106,8 +108,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     // Handle other errors
-    // TODO: Replace with structured logger (Winston/Pino) before production
-    console.error('Error creating room:', error);
+    logError('Error creating room', error);
     res.status(500).json({
       error: 'Failed to create room',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -186,8 +187,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       });
     }
 
-    // TODO: Replace with structured logger (Winston/Pino) before production
-    console.error('Error fetching room:', error);
+    logError('Error fetching room', error);
     res.status(500).json({
       error: 'Failed to fetch room',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -275,8 +275,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       });
     }
 
-    // TODO: Replace with structured logger (Winston/Pino) before production
-    console.error('Error deleting room:', error);
+    logError('Error deleting room', error);
     res.status(500).json({
       error: 'Failed to delete room',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -336,8 +335,7 @@ router.get('/mine', requireAuth, async (req: Request, res: Response) => {
 
     res.json({ rooms, count: rooms.length });
   } catch (error) {
-    // TODO: Replace with structured logger (Winston/Pino) before production
-    console.error('Error fetching user rooms:', error);
+    logError('Error fetching user rooms', error);
     res.status(500).json({
       error: 'Failed to fetch rooms',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -349,8 +347,8 @@ router.get('/mine', requireAuth, async (req: Request, res: Response) => {
  * @swagger
  * /api/rooms:
  *   get:
- *     summary: List all rooms (Admin only)
- *     description: Retrieves a list of all rooms with optional limit. Requires admin authentication.
+ *     summary: List user's rooms
+ *     description: Retrieves a list of rooms owned by the authenticated user with optional limit
  *     tags: [Rooms]
  *     security:
  *       - cookieAuth: []
@@ -366,7 +364,7 @@ router.get('/mine', requireAuth, async (req: Request, res: Response) => {
  *         example: 20
  *     responses:
  *       200:
- *         description: List of rooms
+ *         description: List of user's rooms
  *         content:
  *           application/json:
  *             schema:
@@ -382,8 +380,6 @@ router.get('/mine', requireAuth, async (req: Request, res: Response) => {
  *                   example: 5
  *       401:
  *         description: Authentication required
- *       403:
- *         description: Admin access required
  *       500:
  *         description: Server error
  *         content:
@@ -391,15 +387,22 @@ router.get('/mine', requireAuth, async (req: Request, res: Response) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/', requireAdmin, async (req: Request, res: Response) => {
+router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
+    const user = req.user as { id: string; email: string; name: string };
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 50;
-    const rooms = await getAllRooms(limit);
+
+    // Only return rooms owned by the authenticated user
+    const rooms = await getRoomsByOwnerId(user.id, limit);
+
+    logInfo('User fetched their rooms', {
+      userId: user.id,
+      count: rooms.length,
+    });
 
     res.json({ rooms, count: rooms.length });
   } catch (error) {
-    // TODO: Replace with structured logger (Winston/Pino) before production
-    console.error('Error fetching rooms:', error);
+    logError('Error fetching rooms', error);
     res.status(500).json({
       error: 'Failed to fetch rooms',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -497,11 +500,15 @@ router.put('/:roomId/tracks/:trackId', async (req: Request, res: Response) => {
       setEntry: fullEntry,
     });
 
-    console.log(`Track ${trackId} updated in room ${roomId}:`, updates);
+    logInfo('Track updated in room', {
+      trackId,
+      roomId,
+      updates,
+    });
 
     res.json({ setEntry: updatedEntry });
   } catch (error) {
-    console.error('Error updating track:', error);
+    logError('Error updating track', error);
 
     if (error instanceof Error && error.message.includes('Record to update not found')) {
       return res.status(404).json({ error: 'Track not found' });

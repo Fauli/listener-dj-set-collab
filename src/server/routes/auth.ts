@@ -4,6 +4,7 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import passport from 'passport';
+import { logInfo, logDebug } from '../middleware/logger.js';
 
 const router = express.Router();
 
@@ -62,7 +63,7 @@ router.get(
 router.get(
   '/github',
   (req, res, next) => {
-    console.log('🚀 Initiating GitHub OAuth login');
+    logInfo('Initiating GitHub OAuth login');
     next();
   },
   passport.authenticate('github', {
@@ -84,7 +85,7 @@ router.get(
 router.get(
   '/github/callback',
   (req, res, next) => {
-    console.log('🔙 GitHub callback received');
+    logInfo('GitHub callback received');
     next();
   },
   passport.authenticate('github', {
@@ -92,8 +93,9 @@ router.get(
   }),
   (req: Request, res: Response) => {
     // Successful authentication, redirect to client
-    console.log('✅ GitHub authentication successful, redirecting to client');
-    console.log('👤 Authenticated user:', (req.user as any)?.email);
+    logInfo('GitHub authentication successful', {
+      userEmail: (req.user as any)?.email,
+    });
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
     res.redirect(clientUrl);
   }
@@ -128,15 +130,17 @@ router.get(
  *         description: Not authenticated
  */
 router.get('/me', (req: Request, res: Response) => {
-  console.log('🔍 /auth/me called, isAuthenticated:', req.isAuthenticated());
-  console.log('🍪 Session ID:', req.sessionID);
-  console.log('👤 User in session:', req.user ? (req.user as any).email : 'none');
+  logDebug('/auth/me called', {
+    isAuthenticated: req.isAuthenticated(),
+    sessionId: req.sessionID,
+    user: req.user ? (req.user as { email?: string }).email : 'none',
+  });
 
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const user = req.user as any;
+  const user = req.user as { id: string; email: string; name: string; avatarUrl?: string; role: string };
   res.json({
     id: user.id,
     email: user.email,
@@ -166,74 +170,6 @@ router.post('/logout', (req: Request, res: Response, next: NextFunction) => {
     }
     res.json({ message: 'Logged out successfully' });
   });
-});
-
-/**
- * @swagger
- * /auth/test-login:
- *   post:
- *     summary: Test-only login endpoint for E2E tests
- *     description: Creates a test user and authenticates the session (only available in test/development mode)
- *     tags: [Authentication]
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               userId:
- *                 type: string
- *                 description: ID of the test user to login as
- *     responses:
- *       200:
- *         description: Successfully logged in as test user
- *       403:
- *         description: Test login not available in production
- *       404:
- *         description: User not found
- */
-router.post('/test-login', async (req: Request, res: Response) => {
-  // Only allow test login in development/test environments
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(403).json({ error: 'Test login not available in production' });
-  }
-
-  const { userId } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ error: 'userId is required' });
-  }
-
-  // Import prisma to fetch user
-  const { prisma } = await import('../db/client.js');
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Manually set the user in the session (simulating passport login)
-    req.login(user, (err) => {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to login' });
-      }
-
-      res.json({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatarUrl: user.avatarUrl,
-        role: user.role,
-      });
-    });
-  } catch (error) {
-    console.error('Test login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
 });
 
 export default router;

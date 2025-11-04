@@ -15,6 +15,8 @@ import {
 import { createTrack } from '../models/Track.js';
 import { prisma } from '../db/client.js';
 import { transcodeAiffToWav, needsTranscoding } from '../utils/transcoder.js';
+import { requireAuth } from '../middleware/auth.js';
+import { logInfo, logError } from '../middleware/logger.js';
 
 const router = express.Router();
 
@@ -133,7 +135,7 @@ const upload = multer({
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', upload.single('file'), async (req: Request, res: Response) => {
+router.post('/', requireAuth, upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -166,14 +168,17 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
     let finalFilename = req.file.filename;
 
     if (needsTranscoding(req.file.filename)) {
-      console.log(`Transcoding AIFF file: ${req.file.filename} → WAV`);
+      logInfo('Transcoding AIFF file to WAV', { originalFilename: req.file.filename });
       try {
         const wavPath = await transcodeAiffToWav(req.file.path);
         finalFilePath = wavPath;
         finalFilename = path.basename(wavPath);
-        console.log(`Transcoding complete: ${finalFilename} (metadata preserved from original AIFF)`);
+        logInfo('Transcoding complete', {
+          finalFilename,
+          note: 'metadata preserved from original AIFF'
+        });
       } catch (transcodingError) {
-        console.error('Transcoding failed:', transcodingError);
+        logError('Transcoding failed', transcodingError);
         // Clean up original file
         await fs.unlink(req.file.path);
         return res.status(500).json({
@@ -194,9 +199,12 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
       sourceURI: finalFilename, // Store the final filename (WAV if transcoded from AIFF)
     });
 
-    console.log(
-      `File uploaded: ${req.file.originalname} → ${finalFilename} (${metadata.extractedFrom} metadata)`
-    );
+    logInfo('File uploaded successfully', {
+      originalFilename: req.file.originalname,
+      finalFilename,
+      metadataFrom: metadata.extractedFrom,
+      trackId: track.id,
+    });
 
     // Return track info and extracted metadata
     res.status(201).json({
@@ -208,7 +216,7 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Error handling file upload:', error);
+    logError('Error handling file upload', error);
 
     // Clean up file if it was uploaded
     if (req.file) {
@@ -223,7 +231,7 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
           await fs.unlink(req.file.path);
         }
       } catch (unlinkError) {
-        console.error('Error deleting file after failed upload:', unlinkError);
+        logError('Error deleting file after failed upload', unlinkError);
       }
     }
 
@@ -369,7 +377,7 @@ router.get('/:trackId/audio', async (req: Request, res: Response) => {
     const fileStream = await fs.readFile(filePath);
     res.send(fileStream);
   } catch (error) {
-    console.error('Error streaming audio file:', error);
+    logError('Error streaming audio file', error);
     res.status(500).json({
       error: 'Failed to stream audio',
       details: error instanceof Error ? error.message : 'Unknown error',

@@ -14,6 +14,7 @@ import {
 import { getRoomById } from '../models/Room.js';
 import { createTrackSchema } from '../validators/trackSchemas.js';
 import { ZodError } from 'zod';
+import { logInfo, logError } from '../middleware/logger.js';
 
 /**
  * Operation queue to ensure sequential processing per room
@@ -34,7 +35,7 @@ class RoomOperationQueue {
       .then(() => operation())
       .catch((error) => {
         // Log error but don't break the chain
-        console.error(`Operation failed for room ${roomId}:`, error);
+        logError(`Operation failed for room ${roomId}`, error);
         throw error;
       });
 
@@ -130,10 +131,14 @@ export async function handleAddTrack(io: Server, socket: Socket, data: AddTrackD
         setEntry,
       });
 
-      // eslint-disable-next-line no-console
-      console.log(`Track "${trackTitle}" added to room ${roomId} at position ${position}`);
+      logInfo('Track added to room', {
+        trackTitle,
+        roomId,
+        position,
+        trackId: finalTrackId,
+      });
     } catch (error) {
-      console.error('Error in handleAddTrack:', error);
+      logError('Error in handleAddTrack', error);
 
       if (error instanceof ZodError) {
         socket.emit('error', {
@@ -174,10 +179,13 @@ export async function handleRemoveTrack(io: Server, socket: Socket, data: Remove
       position: removedEntry.position,
     });
 
-    // eslint-disable-next-line no-console
-    console.log(`Track removed from room ${roomId} (entry: ${entryId})`);
+    logInfo('Track removed from room', {
+      roomId,
+      entryId,
+      position: removedEntry.position,
+    });
   } catch (error) {
-    console.error('Error in handleRemoveTrack:', error);
+    logError('Error in handleRemoveTrack', error);
 
     // If track not found (already deleted), treat as success and broadcast anyway
     // This makes delete idempotent and ensures all clients stay in sync
@@ -187,8 +195,10 @@ export async function handleRemoveTrack(io: Server, socket: Socket, data: Remove
         entryId,
         position: -1, // Position unknown since already deleted
       });
-      // eslint-disable-next-line no-console
-      console.log(`Track ${entryId} already deleted in room ${roomId}, broadcasting anyway for sync`);
+      logInfo('Track already deleted, broadcasting for sync', {
+        entryId,
+        roomId,
+      });
     } else {
       // Other errors: emit to requesting client only
       socket.emit('error', {
@@ -221,10 +231,12 @@ export async function handleUpdateNote(io: Server, socket: Socket, data: UpdateN
       setEntry: updatedEntry,
     });
 
-    // eslint-disable-next-line no-console
-    console.log(`Track note updated in room ${roomId} (entry: ${entryId})`);
+    logInfo('Track note updated', {
+      roomId,
+      entryId,
+    });
   } catch (error) {
-    console.error('Error in handleUpdateNote:', error);
+    logError('Error in handleUpdateNote', error);
     socket.emit('error', {
       message: 'Failed to update track note',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -270,10 +282,14 @@ export async function handleReorder(io: Server, socket: Socket, data: ReorderTra
         playlist: updatedPlaylist,
       });
 
-      // eslint-disable-next-line no-console
-      console.log(`Track reordered in room ${roomId}: ${oldPosition} → ${newPosition}`);
+      logInfo('Track reordered', {
+        roomId,
+        entryId,
+        oldPosition,
+        newPosition,
+      });
     } catch (error) {
-      console.error('Error in handleReorder:', error);
+      logError('Error in handleReorder', error);
       socket.emit('error', {
         message: 'Failed to reorder track',
         details: error instanceof Error ? error.message : 'Unknown error',

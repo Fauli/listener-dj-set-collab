@@ -5,18 +5,22 @@
 import { Server, Socket } from 'socket.io';
 import { getRoomById } from '../models/Room.js';
 import { createSession, getActiveSessions, endSession, getSessionBySocketId } from '../models/Session.js';
+import { getAuthenticatedUserId, type AuthenticatedSocket } from '../middleware/websocketAuth.js';
+import { logInfo, logError } from '../middleware/logger.js';
 
 interface JoinRoomData {
   roomId: string;
-  userId: string;
 }
 
 /**
  * Handle user joining a room
  */
-export async function handleJoinRoom(io: Server, socket: Socket, data: JoinRoomData) {
+export async function handleJoinRoom(io: Server, socket: AuthenticatedSocket, data: JoinRoomData) {
   try {
-    const { roomId, userId } = data;
+    const { roomId } = data;
+
+    // Get authenticated user ID from socket (set by authentication middleware)
+    const userId = getAuthenticatedUserId(socket);
 
     // Validate room exists
     const room = await getRoomById(roomId);
@@ -73,10 +77,14 @@ export async function handleJoinRoom(io: Server, socket: Socket, data: JoinRoomD
       joinedAt: session.joinedAt,
     });
 
-    // eslint-disable-next-line no-console
-    console.log(`User ${session.user.name} joined room ${room.name} (${roomId})`);
+    logInfo('User joined room', {
+      userName: session.user.name,
+      userId: session.user.id,
+      roomName: room.name,
+      roomId,
+    });
   } catch (error) {
-    console.error('Error in handleJoinRoom:', error);
+    logError('Error in handleJoinRoom', error);
     socket.emit('error', {
       message: 'Failed to join room',
       details: error instanceof Error ? error.message : 'Unknown error',
@@ -111,11 +119,13 @@ export async function handleDisconnect(io: Server, socket: Socket) {
         })),
       });
 
-      // eslint-disable-next-line no-console
-      console.log(`Socket ${socket.id} disconnected and session ended`);
+      logInfo('User disconnected and session ended', {
+        socketId: socket.id,
+        roomId,
+      });
     }
   } catch (error) {
-    console.error('Error in handleDisconnect:', error);
+    logError('Error in handleDisconnect', error);
   }
 }
 

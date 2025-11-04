@@ -76,7 +76,7 @@ function HomePage() {
         </main>
 
         <footer className="mt-12 text-center text-gray-500 text-sm">
-          <p>Phase 1.1: Room Creation ✓ | Phase 1.2: Join Room ✓ | Phase 2: OAuth2 ✓</p>
+          <p>Vibin&apos; with Fauli since 2025 🎧</p>
         </footer>
       </div>
     </div>

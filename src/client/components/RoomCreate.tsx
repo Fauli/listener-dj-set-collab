@@ -2,10 +2,22 @@
  * Room creation component
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { createRoom } from '../services/api';
+import { createRoom, listRooms, deleteRoom as deleteRoomApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+
+interface Room {
+  id: string;
+  name: string;
+  createdAt: string;
+  ownerId: string;
+  owner: {
+    id: string;
+    name: string;
+    role: string;
+  };
+}
 
 export default function RoomCreate() {
   const { user } = useAuth();
@@ -17,6 +29,31 @@ export default function RoomCreate() {
     name: string;
     joinLink: string;
   } | null>(null);
+  const [existingRooms, setExistingRooms] = useState<Room[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [copiedRoomId, setCopiedRoomId] = useState<string | null>(null);
+
+  // Fetch user's existing rooms on component mount
+  useEffect(() => {
+    const fetchRooms = async () => {
+      if (!user) return;
+
+      setLoadingRooms(true);
+      try {
+        const response = await listRooms(10); // Get last 10 rooms
+        setExistingRooms(response.rooms);
+      } catch (err) {
+        console.error('Failed to fetch rooms:', err);
+        // Don't show error - it's not critical for room creation
+      } finally {
+        setLoadingRooms(false);
+      }
+    };
+
+    fetchRooms();
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +81,9 @@ export default function RoomCreate() {
         joinLink: frontendJoinLink,
       });
       setRoomName(''); // Reset form
+
+      // Add new room to the existing rooms list
+      setExistingRooms((prev) => [response.room, ...prev]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create room');
     } finally {
@@ -54,6 +94,36 @@ export default function RoomCreate() {
   const handleCreateAnother = () => {
     setCreatedRoom(null);
     setError('');
+  };
+
+  const handleCopyLink = async (roomId: string) => {
+    const link = `${window.location.origin}/rooms/${roomId}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedRoomId(roomId);
+      // Reset copied state after 2 seconds
+      setTimeout(() => setCopiedRoomId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
+
+  const handleDeleteRoom = async () => {
+    if (!deleteConfirm) return;
+
+    setDeleting(true);
+    try {
+      await deleteRoomApi(deleteConfirm.id);
+
+      // Remove room from list
+      setExistingRooms((prev) => prev.filter((room) => room.id !== deleteConfirm.id));
+      setDeleteConfirm(null);
+    } catch (err) {
+      console.error('Failed to delete room:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete room. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Success state - show join link
@@ -162,6 +232,130 @@ export default function RoomCreate() {
           </ul>
         </div>
       </div>
+
+      {/* Existing Rooms Section */}
+      {existingRooms.length > 0 && (
+        <div className="bg-gray-800 rounded-lg p-6 mt-6">
+          <h3 className="text-xl font-bold mb-4">Your Existing Rooms</h3>
+          <p className="text-gray-400 text-sm mb-4">
+            Click on a room to continue where you left off
+          </p>
+
+          {loadingRooms ? (
+            <div className="text-center text-gray-500 py-4">Loading your rooms...</div>
+          ) : (
+            <div className="space-y-3">
+              {existingRooms.map((room) => (
+                <div
+                  key={room.id}
+                  className="bg-gray-900 border border-gray-700 rounded-lg p-4"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    {/* Room Info - Clickable */}
+                    <Link
+                      to={`/rooms/${room.id}`}
+                      className="flex-1 group"
+                    >
+                      <h4 className="font-semibold text-gray-200 group-hover:text-primary-400 transition">
+                        {room.name}
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        Created {new Date(room.createdAt).toLocaleDateString()}
+                      </p>
+                    </Link>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      {/* Copy Link Button */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleCopyLink(room.id);
+                        }}
+                        className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-sm font-medium transition flex items-center gap-2"
+                        title="Copy room link"
+                      >
+                        {copiedRoomId === room.id ? (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            Copy Link
+                          </>
+                        )}
+                      </button>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setDeleteConfirm({ id: room.id, name: room.name });
+                        }}
+                        className="px-3 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 hover:text-red-300 rounded text-sm font-medium transition flex items-center gap-2"
+                        title="Delete room"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 border border-gray-700">
+            <h3 className="text-xl font-bold mb-2 text-red-400">Delete Room?</h3>
+            <p className="text-gray-300 mb-4">
+              Are you sure you want to delete <span className="font-semibold">&quot;{deleteConfirm.name}&quot;</span>?
+            </p>
+            <p className="text-gray-500 text-sm mb-6">
+              This action cannot be undone. All tracks and playlist data in this room will be permanently deleted.
+            </p>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded font-medium transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteRoom}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-medium transition disabled:opacity-50 flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Room'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
