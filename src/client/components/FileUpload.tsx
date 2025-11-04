@@ -3,6 +3,7 @@
  */
 
 import { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import toast from 'react-hot-toast';
 import { API_URL } from '../config/api.js';
 
 export interface UploadedFile {
@@ -57,6 +58,11 @@ export default function FileUpload({ roomId, onUploadComplete, onFilesSelected }
       const file = fileList[i];
       const error = validateFile(file);
 
+      if (error) {
+        // Show toast for validation errors
+        toast.error(`${file.name}: ${error}`);
+      }
+
       newFiles.push({
         file,
         id: generateFileId(),
@@ -92,6 +98,9 @@ export default function FileUpload({ roomId, onUploadComplete, onFilesSelected }
 
     try {
       const xhr = new XMLHttpRequest();
+
+      // Enable credentials (send session cookie)
+      xhr.withCredentials = true;
 
       // Track upload progress
       xhr.upload.addEventListener('progress', (e) => {
@@ -129,17 +138,24 @@ export default function FileUpload({ roomId, onUploadComplete, onFilesSelected }
           }
         } else {
           const errorData = JSON.parse(xhr.responseText);
+          const errorMessage = errorData.message || errorData.error || 'Upload failed';
           setFiles((prev) =>
             prev.map((f) =>
               f.id === uploadedFile.id
                 ? {
                     ...f,
                     status: 'error' as const,
-                    error: errorData.error || 'Upload failed',
+                    error: errorMessage,
                   }
                 : f
             )
           );
+          // Show more detailed message for rate limit errors
+          if (xhr.status === 429) {
+            toast.error(`Upload limit exceeded. ${errorMessage}`, { duration: 5000 });
+          } else {
+            toast.error(`Failed to upload ${uploadedFile.file.name}: ${errorMessage}`);
+          }
         }
       });
 
@@ -152,22 +168,25 @@ export default function FileUpload({ roomId, onUploadComplete, onFilesSelected }
               : f
           )
         );
+        toast.error(`Failed to upload ${uploadedFile.file.name}: Network error`);
       });
 
       xhr.open('POST', `${API_URL}/upload`);
       xhr.send(formData);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       setFiles((prev) =>
         prev.map((f) =>
           f.id === uploadedFile.id
             ? {
                 ...f,
                 status: 'error' as const,
-                error: error instanceof Error ? error.message : 'Upload failed',
+                error: errorMessage,
               }
             : f
         )
       );
+      toast.error(`Failed to upload ${uploadedFile.file.name}: ${errorMessage}`);
     }
   };
 

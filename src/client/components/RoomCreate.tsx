@@ -4,8 +4,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { createRoom, listRooms, deleteRoom as deleteRoomApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { RoomSkeleton } from './Skeleton';
 
 interface Room {
   id: string;
@@ -84,8 +86,13 @@ export default function RoomCreate() {
 
       // Add new room to the existing rooms list
       setExistingRooms((prev) => [response.room, ...prev]);
+
+      // Show success toast
+      toast.success(`Room "${response.room.name}" created successfully!`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create room');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create room';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -101,10 +108,12 @@ export default function RoomCreate() {
     try {
       await navigator.clipboard.writeText(link);
       setCopiedRoomId(roomId);
+      toast.success('Room link copied to clipboard!');
       // Reset copied state after 2 seconds
       setTimeout(() => setCopiedRoomId(null), 2000);
     } catch (err) {
       console.error('Failed to copy link:', err);
+      toast.error('Failed to copy link to clipboard');
     }
   };
 
@@ -117,10 +126,13 @@ export default function RoomCreate() {
 
       // Remove room from list
       setExistingRooms((prev) => prev.filter((room) => room.id !== deleteConfirm.id));
+      toast.success(`Room "${deleteConfirm.name}" deleted successfully`);
       setDeleteConfirm(null);
     } catch (err) {
       console.error('Failed to delete room:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete room. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete room. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setDeleting(false);
     }
@@ -150,6 +162,7 @@ export default function RoomCreate() {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(createdRoom.joinLink);
+                  toast.success('Room link copied to clipboard!');
                 }}
                 className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-medium transition"
               >
@@ -242,7 +255,11 @@ export default function RoomCreate() {
           </p>
 
           {loadingRooms ? (
-            <div className="text-center text-gray-500 py-4">Loading your rooms...</div>
+            <div className="space-y-3">
+              <RoomSkeleton />
+              <RoomSkeleton />
+              <RoomSkeleton />
+            </div>
           ) : (
             <div className="space-y-3">
               {existingRooms.map((room) => (

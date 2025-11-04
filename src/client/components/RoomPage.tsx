@@ -4,6 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   joinRoom,
   onRoomState,
@@ -139,6 +140,7 @@ export default function RoomPage() {
     // Listen for track added
     const unsubscribeTrackAdded = onTrackAdded((data: TrackAddedData) => {
       addTrack(data.setEntry);
+      toast.success(`Track "${data.setEntry.track.title}" added to playlist`);
     });
 
     // Listen for track removed
@@ -146,11 +148,13 @@ export default function RoomPage() {
       console.log('🗑️  Received playlist:track-removed event:', data);
       removeTrack(data.entryId);
       console.log('✅ Called removeTrack for entryId:', data.entryId);
+      toast.success('Track removed from playlist');
     });
 
     // Listen for track updated
     const unsubscribeTrackUpdated = onTrackUpdated((data: TrackUpdatedData) => {
       updateTrack(data.setEntry.id, data.setEntry);
+      // Don't show toast for track updates - they happen frequently and would be noisy
     });
 
     // Listen for track reordered

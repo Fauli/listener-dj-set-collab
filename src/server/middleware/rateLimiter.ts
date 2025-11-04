@@ -55,12 +55,12 @@ export const authLimiter = rateLimit({
 });
 
 /**
- * Strict rate limiter for file uploads
- * 10 uploads per hour per IP
+ * Relaxed rate limiter for file uploads
+ * 10,000 uploads per hour per IP (very high limit for bulk DJ library uploads)
  */
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // Limit each IP to 10 uploads per hour
+  max: 10000, // Limit each IP to 10,000 uploads per hour (for bulk music library uploads)
   message: 'Too many file uploads, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -72,7 +72,7 @@ export const uploadLimiter = rateLimit({
     });
     res.status(429).json({
       error: 'Too many file uploads',
-      message: 'You have exceeded the file upload limit. Please try again later.',
+      message: 'You have exceeded the file upload limit (10,000 uploads per hour). Please try again later.',
       retryAfter: 3600, // 1 hour
     });
   },

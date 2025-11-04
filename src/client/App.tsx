@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import RoomCreate from './components/RoomCreate';
 import RoomPage from './components/RoomPage';
 import LoginPage from './components/LoginPage';
@@ -91,6 +92,28 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <div className="min-h-screen bg-gray-900 text-white">
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#1f2937',
+                color: '#f3f4f6',
+                border: '1px solid #374151',
+              },
+              success: {
+                iconTheme: {
+                  primary: '#10b981',
+                  secondary: '#1f2937',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: '#1f2937',
+                },
+              },
+            }}
+          />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route

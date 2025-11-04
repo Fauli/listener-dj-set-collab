@@ -6,13 +6,32 @@
 import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
 import fs from 'fs/promises';
+import { execSync } from 'child_process';
 
-// Configure FFmpeg path (Linux/macOS standard location)
-// This helps fluent-ffmpeg find ffmpeg even if it's not in PATH
-try {
-  ffmpeg.setFfmpegPath('/usr/bin/ffmpeg');
-} catch (error) {
-  console.warn('Could not set explicit ffmpeg path, using system PATH:', error);
+// Configure FFmpeg path - try common locations
+// This helps fluent-ffmpeg find ffmpeg
+const ffmpegPaths = [
+  '/opt/homebrew/bin/ffmpeg', // Homebrew on Apple Silicon
+  '/usr/local/bin/ffmpeg',     // Homebrew on Intel Mac
+  '/usr/bin/ffmpeg',           // Linux standard location
+];
+
+let ffmpegFound = false;
+for (const ffmpegPath of ffmpegPaths) {
+  try {
+    execSync(`test -f ${ffmpegPath}`, { stdio: 'ignore' });
+    ffmpeg.setFfmpegPath(ffmpegPath);
+    console.info(`✅ FFmpeg found at: ${ffmpegPath}`);
+    ffmpegFound = true;
+    break;
+  } catch {
+    // Path doesn't exist, try next one
+  }
+}
+
+if (!ffmpegFound) {
+  console.warn('⚠️  FFmpeg not found at standard locations. Transcoding AIFF files may fail.');
+  console.warn('   Install FFmpeg: brew install ffmpeg');
 }
 
 /**
