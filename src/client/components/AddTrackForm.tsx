@@ -18,6 +18,17 @@ export default function AddTrackForm({ roomId }: AddTrackFormProps) {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts if user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
       // Esc to close upload form
       if (e.key === 'Escape' && isExpanded) {
         setIsExpanded(false);

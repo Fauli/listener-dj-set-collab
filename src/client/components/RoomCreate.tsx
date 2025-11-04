@@ -40,6 +40,17 @@ export default function RoomCreate() {
   // Keyboard shortcut to close delete modal with Esc
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts if user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
       if (e.key === 'Escape' && deleteConfirm && !deleting) {
         setDeleteConfirm(null);
       }
